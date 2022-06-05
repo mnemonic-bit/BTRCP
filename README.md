@@ -2,7 +2,7 @@
 # BTRCP
 
 BTRCP is a backup-command that can be used to copy files and folders
-facilitating the BTRFS as its target storage. Its main features are
+facilitating the BTRFS file system as a target storage. Its main features are
 
 * BTRFS support of the target storage device
 * uses rsync to copy the actual data
@@ -12,8 +12,18 @@ facilitating the BTRFS as its target storage. Its main features are
 ## How to install this script
 
 BTRCP is a python script, and needs at least Python version 3.5. It also
-depends on the Python library Plumbum. To install the script dependencies,
-run
+depends on the Python library Plumbum.
+
+Please note that in order to install the dependecies, you need Pip 3. Please
+make sure that you have Pip in version 3 installed, and that your command
+actually points to version 3 in case you have multiple versions installed.
+To check this, you can call
+
+```
+$> pip --version
+```
+
+To install the script dependencies, run
 
 ```
 pip install plumbum
@@ -30,7 +40,16 @@ exceptions to exclude from the backup.
 An example call might look like this
 
 ```
-btrcp.py --source-dir / --exclude-dir /proc --exclude-dir /dev --exclude-dir /sys --exclude-dir /run --dest-dir ssh://LinuxBackupUser@192.168.10.241/volume1/LinuxBackups --strategy 3 --days-off 2 --stay-on-fs
+$> btrcp.py \
+    --source-dir / \
+    --exclude-dir /proc \
+    --exclude-dir /dev \
+    --exclude-dir /sys \
+    --exclude-dir /run \
+    --dest-dir ssh://LinuxBackupUser@192.168.10.241/volume1/LinuxBackups \
+    --strategy 3 \
+    --days-off 2 \
+    --stay-on-fs
 ```
 
 ## Command Line Options

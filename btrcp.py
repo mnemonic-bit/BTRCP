@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 
 
-
 import argparse
 import datetime
 from datetime import timedelta
@@ -18,7 +17,6 @@ import signal
 import sys
 import subprocess
 from urllib.parse import urlparse
-
 
 
 
@@ -535,10 +533,6 @@ def backup_strategy_1 (hostName, sourceDirs, destinationDir, *, excludes = [], s
 def backup_rsync_single_dir (sourceDir, destinationDir, *, excludes = [], stayOnFS = True, ignoreErrors = False):
     # Measure the size of the backup
     write_log ('The size of the source {0} is: {1}.'.format (sourceDir.path, _du (sourceDir)))
-
-    # If the source folder is part of the list of excluded directories,
-    # then we stop here
-    
 
     # We intend to write the sync-result to a destination folder
     # that identifies the host from which the data comes from, and
