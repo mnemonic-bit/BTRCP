@@ -1,13 +1,32 @@
 
 # BTRCP
 
-BTRCP is a backup-command that can be used to copy files and folders
+BTRCP is a backup script that can be used to copy files and folders
 facilitating the BTRFS file system as a target storage. Its main features are
 
 * BTRFS support of the target storage device
 * uses rsync to copy the actual data
 * can create TAR archives instead of writing the backup to a file system
 * supports SSH for remote backups
+
+It is currently designed to run on Linux systems, where the client needs
+the following commands accessible in its PATH:
+
+* rsync
+* mkdir
+* stat
+* ssh client
+
+The target-machine, if BTRCP is used to backup files to a different server,
+needs the following commands accessible in its path
+
+* ssh server enabled
+* rsync host enabled
+* stat
+* btrfs (if the corresponding strategy is used for backup)
+
+It might also work on Windows with a Cmder or Cygwin installed. This has
+to be verified.
 
 ## How to install this script
 
@@ -37,7 +56,7 @@ To use BTRCP, you just need to define the source dir(s), a destination
 folder (which is possibly hosted on a different machine), and a list of
 exceptions to exclude from the backup.
 
-An example call might look like this
+An example call might look like this:
 
 ```
 $> btrcp.py \
@@ -47,6 +66,20 @@ $> btrcp.py \
     --exclude-dir /sys \
     --exclude-dir /run \
     --dest-dir ssh://LinuxBackupUser@192.168.10.241/volume1/LinuxBackups \
+    --strategy 3 \
+    --days-off 2 \
+    --stay-on-fs
+```
+
+Another example for backing up a users' home folder, and the `/etc` foder to a locally mounted backup device.
+Please note that with the option `--strategy 3` we assume that the device mounted to `/mnt/backupdev`
+is formatted with the BTRFS file system.
+
+```
+$> btrcp.py \
+    --source-dir /home \
+    --source-dir /etc \
+    --dest-dir /mnt/backupdev/ \
     --strategy 3 \
     --days-off 2 \
     --stay-on-fs
@@ -68,12 +101,14 @@ $> btrcp.py \
 
 `--stay-on-fs`: If set, only files from the source tree which reside on the sage file system will be added to the backup.
 
+`--preserve-path`: If set, the path from the source system will be prefixes 
+
 `--ignore-errors`: Ignores errors and keeps on working on a backup.
 
 `--log-file FILENAME`: Sets the log file name.
 
 `--quiet`: No messages are printed on screen.
 
-`--dry-run`: Performs a dry-run.
+`--dry-run`: Performs a trial run, which causes no changes.
 
 `--version`: Prints the version of this script to std-out.
