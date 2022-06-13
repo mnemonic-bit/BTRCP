@@ -22,7 +22,7 @@ from urllib.parse import urlparse
 
 
 # This is the version of the script.
-script_version='1.1.0'
+script_version='1.1.1'
 
 
 

@@ -56,22 +56,25 @@ To use BTRCP, you just need to define the source dir(s), a destination
 folder (which is possibly hosted on a different machine), and a list of
 exceptions to exclude from the backup.
 
-An example for backing up the users' home folder, and the `/etc` foder to a locally mounted backup device.
-Please note that with the option `--strategy 3` we assume that the device mounted to `/mnt/backupdev`
-is formatted with the BTRFS file system.
+An example for backing up the users' home folder, and the `/etc` foder to a locally
+mounted backup device. Depending on the file system used to format `/mnt/backupdev`,
+BTRCP chooses between strategy 2 (using rsync in a classical way between source and
+destianation) and strategy 3 (i.e. BTRCP creates subvolumes in the destination for
+each timestamp when a backup is made).
 
 ```
 $> btrcp.py \
     --source-dir /home \
     --source-dir /etc \
     --dest-dir /mnt/backupdev/ \
-    --strategy 3 \
     --days-off 2 \
     --stay-on-fs
 ```
 
 Another example call which backs up the whole file system starting form
 its root, excluding device nodes and proc pseudo file system sub-folders.
+In this example we use explicitly strategy 3, which will fail if the
+destination device is not formatted with the BTRFS file system.
 
 ```
 $> btrcp.py \
@@ -86,7 +89,6 @@ $> btrcp.py \
     --stay-on-fs
 ```
 
-
 ## Command Line Options
 
 `--source-dir PATH`: The path to a file or folder to backup. This parameter can be used more than once, if you whish to backup multiple folders in one go.
@@ -97,7 +99,7 @@ $> btrcp.py \
 
 `--hostname`: The name of the host system which is backed up. If this parameter is not specified, then the systems hostname is read and used instead.
 
-`--strategy NUM`: The strategy that is used for the backup. Valid values are 1, 2, and 3. Default is 2. Strategy 1 creates a single TAR from all the files and folders listed as source. Strategy 2 will use rsync to perform the backup copy. Strategy 3 uses rsync as well, but needs the destination to be a BTRFS file system to make snapshots of former backups, which will create a time-line of backups.
+`--strategy NUM`: The strategy that is used for the backup. Valid values are 1, 2, and 3. Default is None, in wich case a best-fit is chosen automatically. Strategy 1 creates a single TAR from all the files and folders listed as source. Strategy 2 will use rsync to perform the backup copy. Strategy 3 uses rsync as well, but needs the destination to be a BTRFS file system to make snapshots of former backups, which will create a time-line of backups.
 
 `--days-off NUM`: sets the number of days the retention plan is offset to the current date. I.e. if days-off is set to 3, the last three days will not be touched by the retention strategy, hence will not be touched.
 
