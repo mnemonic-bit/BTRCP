@@ -56,22 +56,7 @@ To use BTRCP, you just need to define the source dir(s), a destination
 folder (which is possibly hosted on a different machine), and a list of
 exceptions to exclude from the backup.
 
-An example call might look like this:
-
-```
-$> btrcp.py \
-    --source-dir / \
-    --exclude-dir /proc \
-    --exclude-dir /dev \
-    --exclude-dir /sys \
-    --exclude-dir /run \
-    --dest-dir ssh://LinuxBackupUser@192.168.10.241/volume1/LinuxBackups \
-    --strategy 3 \
-    --days-off 2 \
-    --stay-on-fs
-```
-
-Another example for backing up a users' home folder, and the `/etc` foder to a locally mounted backup device.
+An example for backing up the users' home folder, and the `/etc` foder to a locally mounted backup device.
 Please note that with the option `--strategy 3` we assume that the device mounted to `/mnt/backupdev`
 is formatted with the BTRFS file system.
 
@@ -84,6 +69,23 @@ $> btrcp.py \
     --days-off 2 \
     --stay-on-fs
 ```
+
+Another example call which backs up the whole file system starting form
+its root, excluding device nodes and proc pseudo file system sub-folders.
+
+```
+$> btrcp.py \
+    --source-dir / \
+    --exclude-dir /proc \
+    --exclude-dir /dev \
+    --exclude-dir /sys \
+    --exclude-dir /run \
+    --dest-dir ssh://LinuxBackupUser@192.168.1.1/volume/LinuxBackups \
+    --strategy 3 \
+    --days-off 2 \
+    --stay-on-fs
+```
+
 
 ## Command Line Options
 

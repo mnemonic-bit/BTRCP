@@ -22,7 +22,7 @@ from urllib.parse import urlparse
 
 
 # This is the version of the script.
-script_version='1.0.1'
+script_version='1.1.0'
 
 
 
@@ -44,7 +44,7 @@ class Environment:
 
     # This is the backup strategy that will be used by this script
     # to do its job. By default we use a basic rsync-strategy
-    backup_strategy = 2
+    backup_strategy = None
 
     # Instructs the backup algorithm to stay on the file system if
     # this field is set True. By default btrcp does not honour
@@ -99,7 +99,7 @@ def init_arg_parser():
     parser.add_argument ('--exclude-dir', '-e', dest = 'excluded_dirs', required = False, action = 'append', default = [], metavar='PATH', help='Specifies a source directories to backup. This option can be used multiple times in one command.')
     parser.add_argument ('--dest-dir', '-d', dest = 'dest_dir', required = False, default='.', metavar='PATH', help='Specifies the destination directory where the backups will be written to.')
     parser.add_argument ('--hostname', dest = 'host_name', required = False, metavar = 'NAME', default = None, help = 'sets the alternate hostname to be used instead of the local machines own hostname.')
-    parser.add_argument ('--strategy', dest = 'backup_strategy', required = False, metavar = 'NUM', default = 2, help = 'sets the backup strategy to use. Supported values are 1, 2, 3, 4.')
+    parser.add_argument ('--strategy', dest = 'backup_strategy', required = False, metavar = 'NUM', default = None, help = 'sets the backup strategy to use. Supported values are 1, 2, 3, 4.')
     parser.add_argument ('--days-off', dest = 'days_off_str', required = False, metavar = 'NUM', default = '1', help = 'set the number of days to offset the retention strategy, i.e. deletion of backups will only start after NUM days.')
     #parser.add_argument ('--exclude', '-e', dest = 'excludes', required = False, action = 'append', default = [], metavar = 'FILE', help = 'gives of files or directories to exclude from the backup.')
     parser.add_argument ('--stay-on-fs', dest = 'stay_on_file_system', required = False, action = 'store_const', const = True, help = 'recursion through sub-folders does not leave the bounds of a file-system.')
@@ -152,7 +152,10 @@ def init_env (args):
         runcmdutils.add_log_file_handler (env.log_file_name)
     # Converts the string of --days-off to an integer
     env.days_off = int (args.days_off_str)
-    env.backup_strategy = int (args.backup_strategy)
+    # If a backup strategy is given, convert that string
+    # into a number.
+    if (args.backup_strategy):
+        env.backup_strategy = int (args.backup_strategy)
     env.host_name = args.host_name
     env.source_dirs = args.source_dirs
     env.excluded_dirs = args.excluded_dirs
@@ -503,6 +506,15 @@ def _get_possible_mount_point (path):
 
 
 
+def _find_best_backup_strategy(destinationDir):
+    mountPoint = _get_possible_mount_point (destinationDir)
+    if (not _path_is_btrfs_subvolume (mountPoint)):
+        return 2
+    else:
+        return 3
+
+
+
 def _get_most_recent_backup_dir (hostName, destinationDir):
     destBaseDir = destinationDir.join (hostName)
     mostRecentBackupDir = max (destBaseDir.glob ('{0}/'.format (env.timestampGlobPattern)), key = lambda p: p.get_last_part(), default = None)
@@ -638,9 +650,9 @@ def backup_strategy_3 (hostName, sourceDirs, destinationDir, *, excludes = [], s
 
 
 # Implements the 4th backup strategy:
-# If the root filesystem of the container is a BTRFS subvolume, we can make
+# If the root filesystem of the source is a BTRFS subvolume, we can make
 # use of this and create a snapshot, before sending the difference to the
-# backup location itself.
+# backup location itself. For this we will use btrfs send and receive.
 def backup_strategy_4 (hostName, sourceDir, destinationDir, *, excludes = [], ignoreErrors = False):
     pass
 
@@ -649,17 +661,22 @@ def backup_strategy_4 (hostName, sourceDir, destinationDir, *, excludes = [], ig
 # This is the main entry point for other scripts if this file is used as
 # a module. The parameters passed to this method will come form the list
 # of parameters if this file is started as a script.
-def backup (hostName, sourceDirs, destinationDir, *, strategy = '2', excludes = [], days_off = 1, stayOnFS = True, preservePath = False, ignoreErrors = False):
+def backup (hostName, sourceDirs, destinationDir, *, strategy = None, excludes = [], days_off = 1, stayOnFS = True, preservePath = False, ignoreErrors = False):
     # Defines for each backup strategy the function that implements it,
     # and a string pattern that can be used for globbing the destination
     # directory for backups.
     strategies = {1: backup_strategy_1, 2: backup_strategy_2, 3: backup_strategy_3, 4: backup_strategy_4}
 
-    write_log ('Starting backup with strategy \'{0}\' for host \'{1}\''.format (strategy, hostName))
     # Turn all path-strings into Path-instances
     _src = [Path (p) for p in sourceDirs]
     _dst = Path (destinationDir)
     _excludes = [Path (p) for p in excludes]
+
+    if strategy is None:
+        strategy = _find_best_backup_strategy(_dst)
+
+    write_log ('Starting backup with strategy \'{0}\' for host \'{1}\''.format (strategy, hostName))
+
     strategies[strategy](hostName, _src, _dst, excludes = _excludes, stayOnFS = stayOnFS, preservePath = preservePath, ignoreErrors = ignoreErrors)
 
 
