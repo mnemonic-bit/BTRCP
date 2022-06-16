@@ -4,7 +4,7 @@
 BTRCP is a backup script that can be used to copy files and folders
 facilitating the BTRFS file system as a target storage. Its main features are
 
-* BTRFS support of the target storage device
+* facilitates BTRFS on the target storage device by creating snapshots for each backup. This is well suited for hourly backups.
 * uses rsync to copy the actual data
 * can create TAR archives instead of writing the backup to a file system
 * supports SSH for remote backups
@@ -97,21 +97,21 @@ $> btrcp.py \
 
 `--dest-dir PATH`: The path to the (remote) location where the backup needs will be stored to.
 
-`--hostname`: The name of the host system which is backed up. If this parameter is not specified, then the systems hostname is read and used instead.
+`--hostname`: The name of the host system which is backed up. If this parameter is not specified, then the systems hostname is read and used instead. The hostname is important for backup strategy 2 and 3 which creates a folder on the target device labeled with the hostname's name. This enables the user to backup multiple machines to the same target.
 
 `--strategy NUM`: The strategy that is used for the backup. Valid values are 1, 2, and 3. Default is None, in wich case a best-fit is chosen automatically. Strategy 1 creates a single TAR from all the files and folders listed as source. Strategy 2 will use rsync to perform the backup copy. Strategy 3 uses rsync as well, but needs the destination to be a BTRFS file system to make snapshots of former backups, which will create a time-line of backups.
 
 `--days-off NUM`: sets the number of days the retention plan is offset to the current date. I.e. if days-off is set to 3, the last three days will not be touched by the retention strategy, hence will not be touched.
 
-`--stay-on-fs`: If set, only files from the source tree which reside on the sage file system will be added to the backup.
+`--stay-on-fs`: If set, only those files from a source path which reside on the same file system will be added to the backup.
 
-`--preserve-path`: If set, the path from the source system will be prefixes 
+`--preserve-path`: If set, the path as stated in the source-dir arguments will be preserved.
 
-`--ignore-errors`: Ignores errors and keeps on working on a backup.
+`--ignore-errors`: Ignores rsync errors and keeps on working on a backup until finished with the sequence of its backup instructions. If errors occur during backup, chances are that the resulting backup is incomplete.
 
-`--log-file FILENAME`: Sets the log file name.
+`--log-file FILENAME`: Sets the log file name. With this option, output will be written to the log file instead of std-out.
 
-`--quiet`: No messages are printed on screen.
+`--quiet`: No messages are written neither to std-out nor to a log-file.
 
 `--dry-run`: Performs a trial run, which causes no changes.
 

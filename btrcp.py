@@ -22,7 +22,7 @@ from urllib.parse import urlparse
 
 
 # This is the version of the script.
-script_version='1.1.1'
+script_version='1.1.2'
 
 
 
@@ -194,8 +194,15 @@ def _mk_datetime_boundaries():
 
 # Parses the file name and returns a datetime instance which
 # represents the time equal to the name of the file.
-def _mk_datetime_from_file_name (fileName):
+def _mk_datetime_from_file_name (fileName, *, suffix = None):
     name = os.path.basename (fileName.rstrip (os.sep))
+
+    # remove the file suffix, if we provide such as a parameter,
+    # and the file at hand ends with that suffix.
+    if (suffix and name.endswith(suffix)):
+        name = name[:-len(suffix)]
+        
+    print('name to strptime: "{0}"'.format(name))
     return datetime.datetime.strptime (name, env.timestampFormatString)
 
 
@@ -317,8 +324,12 @@ def _execute_retention_plan (path, *, pattern = None):
     # ctime of each file to each tuple of the list.
     if (not pattern):
         pattern = '*'
-    #fileNames = [(f, datetime.datetime.fromtimestamp (os.path.getmtime (f.path))) for f in path.glob (pattern)]
-    fileNames = [(f, _mk_datetime_from_file_name (f.path)) for f in path.glob (pattern)]
+
+    print('pattern: "{0}"'.format(pattern))
+    wildcardPos = pattern.rfind('*')
+    suffix = pattern if wildcardPos < 0 else pattern[wildcardPos + 1:]
+    print('suffix: "{0}"'.format(suffix))
+    fileNames = [(f, _mk_datetime_from_file_name (f.path, suffix = suffix)) for f in path.glob (pattern)]
 
     # TODO: group the file names according to the retention intervals
     # which are globally defined.
@@ -532,11 +543,12 @@ def backup_strategy_1 (hostName, sourceDirs, destinationDir, *, excludes = [], s
     tarFileName = datetime.datetime.now().strftime ('{0}.tar.gz'.format (env.timestampFormatString))
     tarBackupFile = tarBaseDir.join (tarFileName)
 
-    backedUpFiles = []
-    for dir in sourceDirs:
-        backedUpFiles.extend(dir.glob ('*'))
+    #backedUpFiles = []
+    #for dir in sourceDirs:
+    #    backedUpFiles.extend(dir.glob ('*'))
 
-    exitCode = _create_tar_of_directory (tarBackupFile, backedUpFiles)
+    #exitCode = _create_tar_of_directory(tarBackupFile, backedUpFiles)
+    exitCode = _create_tar_of_directory(tarBackupFile, sourceDirs)
     if (exitCode != 0):
         write_log ('Creating a tar-archive failed for host \'{0}\' with exit code \'{1}\''.format (hostName, exitCode))
         if (not _mv (tarBackupFile, tarBackupFile + '.err')):
