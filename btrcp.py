@@ -22,7 +22,7 @@ from urllib.parse import urlparse
 
 
 # This is the version of the script.
-script_version='1.1.3'
+script_version='1.1.4'
 
 
 
@@ -37,7 +37,7 @@ class Environment:
 
     # The number of days the retention strategy is offset. During this days
     # all backups that were made are kept, until they get older than 'days_off' days.
-    days_off = 1
+    days_off = 2
 
     # The name of the log-file.
     log_file_name = None
@@ -100,7 +100,7 @@ def init_arg_parser():
     parser.add_argument ('--dest-dir', '-d', dest = 'dest_dir', required = False, default='.', metavar='PATH', help='Specifies the destination directory where the backups will be written to.')
     parser.add_argument ('--hostname', dest = 'host_name', required = False, metavar = 'NAME', default = None, help = 'sets the alternate hostname to be used instead of the local machines own hostname.')
     parser.add_argument ('--strategy', dest = 'backup_strategy', required = False, metavar = 'NUM', default = None, help = 'sets the backup strategy to use. Supported values are 1, 2, 3, 4.')
-    parser.add_argument ('--days-off', dest = 'days_off_str', required = False, metavar = 'NUM', default = '1', help = 'set the number of days to offset the retention strategy, i.e. deletion of backups will only start after NUM days.')
+    parser.add_argument ('--days-off', dest = 'days_off_str', required = False, metavar = 'NUM', default = '2', help = 'set the number of days to offset the retention strategy, i.e. deletion of backups will only start after NUM days.')
     #parser.add_argument ('--exclude', '-e', dest = 'excludes', required = False, action = 'append', default = [], metavar = 'FILE', help = 'gives of files or directories to exclude from the backup.')
     parser.add_argument ('--stay-on-fs', dest = 'stay_on_file_system', required = False, action = 'store_const', const = True, help = 'recursion through sub-folders does not leave the bounds of a file-system.')
     parser.set_defaults (stay_on_file_system = False)

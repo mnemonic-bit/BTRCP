@@ -101,7 +101,7 @@ $> btrcp.py \
 
 `--strategy NUM`: The strategy that is used for the backup. Valid values are 1, 2, and 3. Default is None, in wich case a best-fit is chosen automatically. Strategy 1 creates a single TAR from all the files and folders listed as source. Strategy 2 will use rsync to perform the backup copy. Strategy 3 uses rsync as well, but needs the destination to be a BTRFS file system to make snapshots of former backups, which will create a time-line of backups.
 
-`--days-off NUM`: sets the number of days the retention plan is offset to the current date. I.e. if days-off is set to 3, the last three days will not be touched by the retention strategy, hence will not be touched.
+`--days-off NUM`: sets the number of days the retention plan is offset to the current date. I.e. if days-off is set to 3, the last three days will not be touched by the retention strategy, hence will not be touched. The default of this value is 2.
 
 `--stay-on-fs`: If set, only those files from a source path which reside on the same file system will be added to the backup.
 
