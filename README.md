@@ -62,8 +62,8 @@ in your home directory. To backup all home directories just call
 
 ```
 $> btrcp.py \
-    --source-dir /home \
-    --source-dir /etc \
+    --source /home \
+    --source /etc \
     --dest-dir /mnt/backup-device/ \
     --stay-on-fs
 ```
@@ -77,8 +77,8 @@ example from above changes to
 
 ```
 $> btrcp.py \
-    --source-dir /home \
-    --source-dir /etc \
+    --source /home \
+    --source /etc \
     --dest-dir ssh://BackupUserName@192.168.1.2/path/on/the/server \
     --stay-on-fs
 ```
@@ -89,9 +89,9 @@ on the server to the location we want to put the backup is `/path/on/the/server`
 
 ## Command Line Options
 
-`--source-dir PATH`: The path to a file or folder to backup. This parameter can be used more than once, if you whish to backup multiple folders in one go.
+`--source PATH`: The path to a file or folder to backup. This parameter can be used more than once, if you whish to backup multiple folders in one go.
 
-`--exclude-dir PATH`: A path that needs to be excluded from the backup.
+`--exclude PATH`: A path that needs to be excluded from the backup.
 
 `--dest-dir PATH`: The path to the (remote) location where the backup needs will be stored to.
 
