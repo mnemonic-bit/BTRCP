@@ -3,6 +3,7 @@
 
 import argparse
 from asyncio import format_helpers
+from asyncio.log import logger
 import datetime
 from datetime import timedelta
 from enum import Enum
@@ -22,7 +23,7 @@ from urllib.parse import urlparse
 
 
 # This is the version of the script.
-script_version='1.1.5'
+script_version='2.0.0'
 
 
 
@@ -93,10 +94,48 @@ retentionIntervals = [(Deltas.Day, 14), (Deltas.Week, 6), (Deltas.Month, 10), (D
 
 
 
+class DeprecateAction(argparse.Action):
+    def __init__(self, *args, **kwargs):
+        self.call_count = 0
+        if 'help' in kwargs:
+            kwargs['help'] = f'[DEPRECATED] {kwargs["help"]}'
+        super().__init__(*args, **kwargs)
+
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        if self.call_count == 0:
+            write_log(f"The option `{option_string}` is deprecated. It will be removed in future versions of this script.", LogLevel.WARNING)
+            write_log(self.help, LogLevel.WARNING)
+        self.call_count += 1
+
+
+
+class ObsoleteAction(argparse.Action):
+    def __init__(self, *args, **kwargs):
+        self.call_count = 0
+        if 'help' in kwargs:
+            kwargs['help'] = f'[OBSOLETE] {kwargs["help"]}'
+        super().__init__(*args, **kwargs)
+
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        if self.call_count == 0:
+            write_log(f"The option `{option_string}` is obsolete.", LogLevel.ERROR)
+            write_log(self.help, LogLevel.ERROR)
+            delattr(namespace, self.dest)
+        self.call_count += 1
+
+
+
 def init_arg_parser():
     parser = argparse.ArgumentParser(prog='btrcp', description='Backup utility for BTRFS.')
-    parser.add_argument ('--source-dir', '-s', dest = 'source_dirs', required = True, action = 'append', default = [], metavar='PATH', help='Specifies a source directories to backup. This option can be used multiple times in one command.')
-    parser.add_argument ('--exclude-dir', '-e', dest = 'excluded_dirs', required = False, action = 'append', default = [], metavar='PATH', help='Specifies a source directories to backup. This option can be used multiple times in one command.')
+    parser.register('action', 'deprecated', DeprecateAction)
+    parser.register('action', 'obsolete', ObsoleteAction)
+
+    parser.add_argument ('--source', '-s', dest = 'source_dirs', required = True, action = 'append', default = [], metavar='PATH', help='Specifies a source directories to backup. This option can be used multiple times in one command.')
+    parser.add_argument ('--source-dir', dest = 'source_dirs', required = False, action = 'deprecated', default = [], metavar='PATH', help='This argument has been deprecated and will be removed in future versions of this script\n Please use the option --source instead.')
+    parser.add_argument ('--exclude', '-e', dest = 'excluded_dirs', required = False, action = 'append', default = [], metavar='PATH', help='Specifies a source directories to backup. This option can be used multiple times in one command.')
+    parser.add_argument ('--exclude-dir', dest = 'excluded_dirs', required = False, action = 'deprecated', default = [], metavar='PATH', help='This argument has been deprecated and will be removed in future versions of this script\n Please use the option --exclude instead.')
     parser.add_argument ('--dest-dir', '-d', dest = 'dest_dir', required = False, default='.', metavar='PATH', help='Specifies the destination directory where the backups will be written to.')
     parser.add_argument ('--hostname', dest = 'host_name', required = False, metavar = 'NAME', default = None, help = 'sets the alternate hostname to be used instead of the local machines own hostname.')
     parser.add_argument ('--strategy', dest = 'backup_strategy', required = False, metavar = 'NUM', default = None, help = 'sets the backup strategy to use. Supported values are 1, 2, 3, 4.')
