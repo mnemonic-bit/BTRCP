@@ -28,7 +28,7 @@ needs the following commands accessible in its path
 It might also work on Windows with a Cmder or Cygwin installed. This has
 to be verified.
 
-## How to install this script
+## Before We Start: The Installation
 
 BTRCP is a python script, and needs at least Python version 3.5. It also
 depends on the Python library Plumbum.
@@ -50,44 +50,42 @@ pip install plumbum
 
 The BTRCP script also needs to be accessible from the current path.
 
-## How does it work?
+## Quickstart
 
-To use BTRCP, you just need to define the source dir(s), a destination
-folder (which is possibly hosted on a different machine), and a list of
-exceptions to exclude from the backup.
+To backup your files, you preferrably have a disk at hand which is formatted
+with the BTRFS file system. Note that this script will also work on devices
+which are not in BTRFS format, but to gain the most out of this script, you
+might want to look into using BTRFS as a target for your backups.
 
-An example for backing up the users' home folder, and the `/etc` foder to a locally
-mounted backup device. Depending on the file system used to format `/mnt/backupdev`,
-BTRCP chooses between strategy 2 (using rsync in a classical way between source and
-destianation) and strategy 3 (i.e. BTRCP creates subvolumes in the destination for
-each timestamp when a backup is made).
+A quick start might be to back up your most important data, which should reside
+in your home directory. To backup all home directories just call
 
 ```
 $> btrcp.py \
     --source-dir /home \
     --source-dir /etc \
-    --dest-dir /mnt/backupdev/ \
-    --days-off 2 \
+    --dest-dir /mnt/backup-device/ \
     --stay-on-fs
 ```
 
-Another example call which backs up the whole file system starting form
-its root, excluding device nodes and proc pseudo file system sub-folders.
-In this example we use explicitly strategy 3, which will fail if the
-destination device is not formatted with the BTRFS file system.
+In this example we assumed that the backup device is mounted under `/mnt/backup-device`.
+We've also included the `/etc` folder as this is the place where some system
+applications store their configuration.
+
+In case we want to push the backup to a server offering rsync over SSH, the
+example from above changes to
 
 ```
 $> btrcp.py \
-    --source-dir / \
-    --exclude-dir /proc \
-    --exclude-dir /dev \
-    --exclude-dir /sys \
-    --exclude-dir /run \
-    --dest-dir ssh://LinuxBackupUser@192.168.1.1/volume/LinuxBackups \
-    --strategy 3 \
-    --days-off 2 \
+    --source-dir /home \
+    --source-dir /etc \
+    --dest-dir ssh://BackupUserName@192.168.1.2/path/on/the/server \
     --stay-on-fs
 ```
+
+Here we also assumed that the IP of the server is `192.168.1.2`, the user which
+has access to the server via SSH has the name `BackupUserName`, and the path
+on the server to the location we want to put the backup is `/path/on/the/server`.
 
 ## Command Line Options
 

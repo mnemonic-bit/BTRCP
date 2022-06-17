@@ -22,7 +22,7 @@ from urllib.parse import urlparse
 
 
 # This is the version of the script.
-script_version='1.1.4'
+script_version='1.1.5'
 
 
 
@@ -201,8 +201,7 @@ def _mk_datetime_from_file_name (fileName, *, suffix = None):
     # and the file at hand ends with that suffix.
     if (suffix and name.endswith(suffix)):
         name = name[:-len(suffix)]
-        
-    print('name to strptime: "{0}"'.format(name))
+
     return datetime.datetime.strptime (name, env.timestampFormatString)
 
 
@@ -325,10 +324,8 @@ def _execute_retention_plan (path, *, pattern = None):
     if (not pattern):
         pattern = '*'
 
-    print('pattern: "{0}"'.format(pattern))
     wildcardPos = pattern.rfind('*')
     suffix = pattern if wildcardPos < 0 else pattern[wildcardPos + 1:]
-    print('suffix: "{0}"'.format(suffix))
     fileNames = [(f, _mk_datetime_from_file_name (f.path, suffix = suffix)) for f in path.glob (pattern)]
 
     # TODO: group the file names according to the retention intervals
