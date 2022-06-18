@@ -7,6 +7,7 @@ from enum import Enum
 import logging
 import os
 import glob
+from signal import SIG_DFL
 import plumbum as pb
 import sys
 import subprocess
@@ -20,19 +21,19 @@ from urllib.parse import urlparse
 _logger_is_initialized = False
 
 # This is the logger reference that we use throughout this script.
-_log = logging.getLogger (__name__)
+_log = logging.getLogger(__name__)
 #log.setLevel (logging.DEBUG)
 
 # The log-format to be used for all logging activities
 _logFormat = '%(asctime)-15s  %(message)s'
 
 # The log-formatter instance to be used for several logger streams
-_logFormatter = logging.Formatter (_logFormat)
+_logFormatter = logging.Formatter(_logFormat)
 
 # The instance of the condole log-handler which is used to write
 # all logging data to stdout and stderr.
-_stdoutHandler = logging.StreamHandler (stream = sys.stdout)
-_stderrHandler = logging.StreamHandler (stream = sys.stderr)
+_stdoutHandler = logging.StreamHandler(stream = sys.stdout)
+_stderrHandler = logging.StreamHandler(stream = sys.stderr)
 
 # Stores the environment uesd to execute all commands.
 _env = None
@@ -81,14 +82,23 @@ def remove_console_log_handler():
 class LogLevel(Enum):
     DEBUG = logging.DEBUG
     INFO = logging.INFO
+    WARN = logging.WARN
     WARNING = logging.WARNING
     CRITICAL = logging.CRITICAL
     ERROR = logging.ERROR
 
 
 
+def set_log_level(loglevel):
+    logLevelNum = getattr(logging, loglevel.upper(), None)
+    if not isinstance(logLevelNum, int):
+        raise ValueError('Invalid log level: %s' % loglevel)
+    logging.basicConfig(level = logLevelNum)
+
+
+
 def write_log (msg, level = LogLevel.INFO):
-    log_functions = {LogLevel.DEBUG: _log.debug, LogLevel.INFO: _log.info, LogLevel.WARNING: _log.warning, LogLevel.CRITICAL: _log.critical, LogLevel.ERROR: _log.error}
+    log_functions = { LogLevel.DEBUG: _log.debug, LogLevel.INFO: _log.info, LogLevel.WARNING: _log.warning, LogLevel.CRITICAL: _log.critical, LogLevel.ERROR: _log.error }
     log_functions[level](msg)
 
 
@@ -111,11 +121,11 @@ def _mk_ssh_opts (hostkey):
 
 
 def _mk_maching_context (username, hostname, *, port = None, password = None, opts = None):
-    if (opts == None):
-        raise Exception ('The parameter \'opts\' cannot be None.')
+    if opts == None:
+        raise Exception('The parameter \'opts\' cannot be None.')
     new_machine = None
-    if (hostname):
-        new_machine = pb.SshMachine (hostname, port = port, user = username, password = password, ssh_opts = opts[0], scp_opts = opts[1])
+    if hostname:
+        new_machine = pb.SshMachine(hostname, port = port, user = username, password = password, ssh_opts = opts[0], scp_opts = opts[1])
     else:
         new_machine = _get_local_machine_context()
     return new_machine

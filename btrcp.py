@@ -14,7 +14,7 @@ import os
 import plumbum as pb
 from prelude import identity, fst, snd, concat
 import runcmdutils
-from runcmdutils import Path, write_log, LogLevel, run_cmd, mk_cmd
+from runcmdutils import Path, set_log_level, write_log, LogLevel, run_cmd, mk_cmd
 import signal
 import sys
 import subprocess
@@ -23,7 +23,7 @@ from urllib.parse import urlparse
 
 
 # This is the version of the script.
-script_version='2.0.0'
+script_version='2.0.1'
 
 
 
@@ -147,7 +147,8 @@ def init_arg_parser():
     parser.set_defaults (preserve_path = False)
     parser.add_argument ('--ignore-errors', dest = 'ignore_errors', required = False, action = 'store_const', const = True, help = 'tells rsync (if used for the backup) to ignore read-errors.')
     parser.set_defaults (ignore_errors = False)
-    parser.add_argument ('--log-file', '-l', dest = 'log_file_name', required = False, metavar = 'FILENAME', help = 'Specifies the name of a log file.')
+    parser.add_argument ('--log-file', dest = 'log_file_name', required = False, metavar = 'FILENAME', help = 'Specifies the name of a log file.')
+    parser.add_argument ('--log-level', '-l', dest = 'log_level', required = False, metavar = 'LEVEL', default = 'WARN', help = 'Specifies the log level useb by the script, valied values are DEBUG, INFO, WARN, WARNING, CRITICAL, and ERROR.')
     parser.add_argument ('--quiet', dest = 'silent_mode', required = False, action = 'store_const', const = True, help = 'Suppresses all console output of this script.')
     parser.set_defaults (silent_mode = False)
     parser.add_argument ('--dry-run', dest = 'dry_run', required = False, action = 'store_const', const = True, help = 'Make this a dry-run, actions are only logged.')
@@ -202,6 +203,8 @@ def init_env (args):
     env.stay_on_file_system = args.stay_on_file_system
     env.preserve_path = args.preserve_path
     env.ignore_errors = args.ignore_errors
+    # set the log level of all script output
+    #set_log_level("WARN")
 
 
 
@@ -460,6 +463,11 @@ def _rsync (sources, dest, *, excludes = [], stayOnFS = True, preservePath = Fal
     dst = str(dest)
     if (dest.is_remote_path()):
         dst = dest.full_path()
+    else:
+        # In case this is not a remote path, changes are that
+        # we might include the destination in our backup itself.
+        # To prevent this, we 
+        excludes.append(dst)
 
     # TODO: add the option '-X' to that call after figuring out why
     # not all rsync calls succeed.
