@@ -10,5 +10,9 @@ import btrcp
 def test_test():
     assert 1 == 1
 
+def test_failed():
+    assert 1 == 2
 
+def test_OK():
+    assert 1 == 1
 

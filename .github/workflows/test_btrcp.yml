@@ -36,3 +36,8 @@ jobs:
       - name: Test with pytest
         run: |
           pytest
+      - name: Publishing Test Summary
+        uses: test-summary/action@v2
+        with:
+          paths: "tests/results/**/TEST-*.xml"
+        if: always()
