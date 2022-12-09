@@ -87,7 +87,28 @@ Here we also assumed that the IP of the server is `192.168.1.2`, the user which
 has access to the server via SSH has the name `BackupUserName`, and the path
 on the server to the location we want to put the backup is `/path/on/the/server`.
 
+All examples so far only added new files to the destination on the server. If files
+in one of the source folders has been deleted, they still will be present in the
+latest backup produced by the examples from above.
+
+To truly synchronize the destination with its sources, we need to add the option
+'--sync-mode'. In this case, all files that have been removed from the source
+will also be removed in the destionation.
+
+To re-use one of the examples from above, we can call
+
+```
+$> btrcp.py \
+    --source /home \
+    --source /etc \
+    --dest-dir ssh://BackupUserName@192.168.1.2/path/on/the/server \
+    --stay-on-fs
+    --sync-mode
+```
+
 ## Command Line Options
+
+### Basic Options
 
 `--source PATH`: The path to a file or folder to backup. This parameter can be used more than once, if you whish to backup multiple folders in one go.
 
@@ -95,13 +116,17 @@ on the server to the location we want to put the backup is `/path/on/the/server`
 
 `--dest-dir PATH`: The path to the (remote) location where the backup needs will be stored to.
 
+`--sync-mode`: Removes files in the destination directory when synching the source directories. Files that have been deleted from the source directories between two runs of BTRFS will not be kept in the destination.
+
+`--stay-on-fs`: If set, only those files from a source path which reside on the same file system will be added to the backup.
+
+### Advanced Options
+
 `--hostname`: The name of the host system which is backed up. If this parameter is not specified, then the systems hostname is read and used instead. The hostname is important for backup strategy 2 and 3 which creates a folder on the target device labeled with the hostname's name. This enables the user to backup multiple machines to the same target.
 
 `--strategy NUM`: The strategy that is used for the backup. Valid values are 1, 2, and 3. Default is None, in wich case a best-fit is chosen automatically. Strategy 1 creates a single TAR from all the files and folders listed as source. Strategy 2 will use rsync to perform the backup copy. Strategy 3 uses rsync as well, but needs the destination to be a BTRFS file system to make snapshots of former backups, which will create a time-line of backups.
 
 `--days-off NUM`: sets the number of days the retention plan is offset to the current date. I.e. if days-off is set to 3, the last three days will not be touched by the retention strategy, hence will not be touched. The default of this value is 2.
-
-`--stay-on-fs`: If set, only those files from a source path which reside on the same file system will be added to the backup.
 
 `--preserve-path`: If set, the path as stated in the source-dir arguments will be preserved.
 

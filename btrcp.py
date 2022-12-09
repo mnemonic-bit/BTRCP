@@ -23,7 +23,7 @@ from urllib.parse import urlparse
 
 
 # This is the version of the script.
-script_version='2.0.1'
+script_version='2.1.0'
 
 
 
@@ -55,6 +55,10 @@ class Environment:
     # Preserves the full path from the source system when writing
     # files to the destination file system.
     preserve_path = False
+
+    # Keep files in destination if they have been deleted in the
+    # source directories
+    sync_mode = False
 
     # Tells rsync to ignore read-errors
     ignore_errors = False
@@ -145,6 +149,8 @@ def init_arg_parser():
     parser.set_defaults (stay_on_file_system = False)
     parser.add_argument ('--preserve-path', dest = 'preserve_path', required = False, action = 'store_const', const = True, help = 'preserves the path structure from the source system when writing files to the destination.')
     parser.set_defaults (preserve_path = False)
+    parser.add_argument ('--sync-mode', dest = 'sync_mode', required = False, action = 'store_const', const = True, help = 'deletes files in the destinatoin directory if they have been deleted in the source folder.')
+    parser.set_defaults (sync_mode = False)
     parser.add_argument ('--ignore-errors', dest = 'ignore_errors', required = False, action = 'store_const', const = True, help = 'tells rsync (if used for the backup) to ignore read-errors.')
     parser.set_defaults (ignore_errors = False)
     parser.add_argument ('--log-file', dest = 'log_file_name', required = False, metavar = 'FILENAME', help = 'Specifies the name of a log file.')
@@ -431,7 +437,7 @@ def _du (path):
 # the archive to the file given by the parameter backupFileName.
 def _create_tar_of_directory (backupFileName, files, *, excludes = []):
     if (backupFileName.get_context() != pb.local):
-        args = ['tar', '--numeric-owner', '-czf', '-']
+        args = ['tar', '--numeric-owner', '-czf', '--sparse', '-']
         for ex in excludes:
             args.extend (['--exclude', str(ex)])
         args.extend ([str(f) for f in files])
@@ -456,7 +462,7 @@ def _create_tar_of_directory (backupFileName, files, *, excludes = []):
 # with a separator character ('/') if it designates a directory. Conversely
 # the source path must not end with a slash if it references a file instead
 # of a folder.
-def _rsync (sources, dest, *, excludes = [], stayOnFS = True, preservePath = False, ignoreErrors = False):
+def _rsync (sources, dest, *, excludes = [], stayOnFS = True, preservePath = False, syncMode = False, ignoreErrors = False):
     # If we sync a single file, we must not append a slash to the
     # path, otherwise rsync will run into an error.
     src = [str(source) for source in sources]
@@ -471,14 +477,15 @@ def _rsync (sources, dest, *, excludes = [], stayOnFS = True, preservePath = Fal
 
     # TODO: add the option '-X' to that call after figuring out why
     # not all rsync calls succeed.
-    #args = ['rsync', '-a', '-A', '--relative', '--delete']
-    args = ['rsync', '-a', '-A', '--delete']
+    args = ['rsync', '-a', '-A', '--sparse']
     if (preservePath):
         args.append('--relative')
     if (stayOnFS):
         args.append('-x')
     if (ignoreErrors):
         args.append('--ignore-errors')
+    if (syncMode):
+        args.append('--delete')
     for ex in excludes:
         args.extend(['--exclude', str(ex)])
     # Extend the arguments of rsync with the source and destination.
@@ -609,7 +616,7 @@ def backup_strategy_1 (hostName, sourceDirs, destinationDir, *, excludes = [], s
 
 
 # Backs up multiple source directories using rsync.
-def backup_rsync_source_dirs (sourceDirs, destinationDir, *, excludes = [], stayOnFS = True, preservePath = False, ignoreErrors = False):
+def backup_rsync_source_dirs (sourceDirs, destinationDir, *, excludes = [], stayOnFS = True, preservePath = False, syncMode = False, ignoreErrors = False):
     # Measure the size of the backup
     for sourceDir in sourceDirs:
         write_log ('The size of the source {0} is: {1}.'.format (sourceDir.path, _du (sourceDir)))
@@ -618,7 +625,7 @@ def backup_rsync_source_dirs (sourceDirs, destinationDir, *, excludes = [], stay
     # from the source directory parameter.
     srcDirs = [sourceDir if sourceDir.is_file() else sourceDir.join ('') for sourceDir in sourceDirs]
 
-    exitCode = _rsync (srcDirs, destinationDir, excludes = excludes, stayOnFS = stayOnFS, preservePath = preservePath, ignoreErrors = ignoreErrors)
+    exitCode = _rsync (srcDirs, destinationDir, excludes = excludes, stayOnFS = stayOnFS, preservePath = preservePath, syncMode = syncMode, ignoreErrors = ignoreErrors)
     if (exitCode != 0):
         #write_log ('Copying {0} \'{1}\' with rsync failed with exit code \'{2}\''.format ('file' if sourceDir.is_file() else 'directory', sourceDir, exitCode))
         return False
@@ -633,9 +640,9 @@ def backup_rsync_source_dirs (sourceDirs, destinationDir, *, excludes = [], stay
 # method uses rsync to move all files between locatoins.
 # This strategy does not execute any retention plan because it overwrites
 # older backups in place.
-def backup_strategy_2 (hostName, sourceDirs, destinationDir, *, excludes = [], stayOnFS = True, preservePath = False, ignoreErrors = False):
+def backup_strategy_2 (hostName, sourceDirs, destinationDir, *, excludes = [], stayOnFS = True, preservePath = False, syncMode = False, ignoreErrors = False):
     rsyncDestDir = destinationDir.join (hostName)
-    return  backup_rsync_source_dirs (sourceDirs, rsyncDestDir, excludes = excludes, stayOnFS = stayOnFS, preservePath = preservePath, ignoreErrors = ignoreErrors)
+    return  backup_rsync_source_dirs (sourceDirs, rsyncDestDir, excludes = excludes, stayOnFS = stayOnFS, preservePath = preservePath, syncMode = syncMode, ignoreErrors = ignoreErrors)
 
 
 
@@ -644,7 +651,7 @@ def backup_strategy_2 (hostName, sourceDirs, destinationDir, *, excludes = [], s
 # in the destination location to better track the backup process over time.
 # This assumes that the backup destination has already set up a btrfs subvolume
 # to snapshot. If the destination folder is not 
-def backup_strategy_3 (hostName, sourceDirs, destinationDir, *, excludes = [], stayOnFS = True, preservePath = False, ignoreErrors = False):
+def backup_strategy_3 (hostName, sourceDirs, destinationDir, *, excludes = [], stayOnFS = True, preservePath = False, syncMode = False, ignoreErrors = False):
     destBaseDir = destinationDir.join (hostName)
     destDirName = datetime.datetime.now().strftime (env.timestampFormatString)
     destBtrfsDir = destBaseDir.join (destDirName)
@@ -696,7 +703,7 @@ def backup_strategy_3 (hostName, sourceDirs, destinationDir, *, excludes = [], s
     # From here it really is the same as in strategy 2:
     # we just rsync everything to its destination directory, while
     # the destination is located inside a BTRFS volume or snapshot.
-    backup_rsync_source_dirs (sourceDirs, destBtrfsDir, excludes = excludes, stayOnFS = stayOnFS, preservePath = preservePath, ignoreErrors = ignoreErrors)
+    backup_rsync_source_dirs (sourceDirs, destBtrfsDir, excludes = excludes, stayOnFS = stayOnFS, preservePath = preservePath, syncMode = syncMode, ignoreErrors = ignoreErrors)
 
     # At the end we remove old backups that are no longer needed.
     #_execute_retention_plan (destBaseDir, pattern = '{0}/'.format (env.timestampGlobPattern))
@@ -710,14 +717,17 @@ def backup_strategy_3 (hostName, sourceDirs, destinationDir, *, excludes = [], s
 # use of this and create a snapshot, before sending the difference to the
 # backup location itself. For this we will use btrfs send and receive.
 def backup_strategy_4 (hostName, sourceDir, destinationDir, *, excludes = [], ignoreErrors = False):
-    pass
+    
+    
+    
+    return False
 
 
 
 # This is the main entry point for other scripts if this file is used as
 # a module. The parameters passed to this method will come form the list
 # of parameters if this file is started as a script.
-def backup (hostName, sourceDirs, destinationDir, *, strategy = None, excludes = [], days_off = 1, stayOnFS = True, preservePath = False, ignoreErrors = False):
+def backup (hostName, sourceDirs, destinationDir, *, strategy = None, excludes = [], days_off = 1, stayOnFS = True, preservePath = False, syncMode = False, ignoreErrors = False):
     # Defines for each backup strategy the function that implements it,
     # and a string pattern that can be used for globbing the destination
     # directory for backups.
@@ -733,7 +743,7 @@ def backup (hostName, sourceDirs, destinationDir, *, strategy = None, excludes =
 
     write_log ('Starting backup with strategy \'{0}\' for host \'{1}\''.format (strategy, hostName))
 
-    strategies[strategy](hostName, _src, _dst, excludes = _excludes, stayOnFS = stayOnFS, preservePath = preservePath, ignoreErrors = ignoreErrors)
+    strategies[strategy](hostName, _src, _dst, excludes = _excludes, stayOnFS = stayOnFS, preservePath = preservePath, syncMode = syncMode, ignoreErrors = ignoreErrors)
 
 
 
@@ -742,7 +752,7 @@ def start_backup():
     # we query it from the system.
     if (env.host_name == None):
         env.host_name = _hostname()
-    backup (env.host_name, env.source_dirs, env.dest_dir, strategy = env.backup_strategy, excludes = env.excluded_dirs, stayOnFS = env.stay_on_file_system, preservePath = env.preserve_path, ignoreErrors = env.ignore_errors)
+    backup (env.host_name, env.source_dirs, env.dest_dir, strategy = env.backup_strategy, excludes = env.excluded_dirs, stayOnFS = env.stay_on_file_system, preservePath = env.preserve_path, syncMode = env.sync_mode, ignoreErrors = env.ignore_errors)
 
 
 
