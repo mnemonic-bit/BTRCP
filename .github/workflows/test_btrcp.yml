@@ -12,7 +12,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - name: sdf
+      - name: Check required Linux dependencies
         run: |
           dpkg -l btrfs-progs
       - name: Set up Python ${{ matrix.python-version }}
