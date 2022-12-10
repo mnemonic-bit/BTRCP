@@ -41,3 +41,10 @@ jobs:
         with:
           paths: "tests/results/**/TEST-*.xml"
         if: always()
+      - name: Publish test Report
+        uses: dorny/test-reporter@v1
+        if: success() || failure()    # run this step even if previous step failed
+        with:
+          name: pytest results
+          path: "tests/results/**/TEST-*.xml"
+          reporter: jest-junit

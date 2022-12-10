@@ -2,13 +2,16 @@
 import pytest
 import os, sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-print (sys.path)
 import btrcp
+import runtestutils
+
+
+
 
 
 
 def test_test():
-    assert 1 == 1
+    _mk_disk_image(Path('test.img'))
 
 def test_failed():
     assert 1 == 2
