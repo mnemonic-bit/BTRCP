@@ -179,27 +179,26 @@ def get_user_info():
 
 def init_env (args):
     global env
-    #env = args
 
     # All excludes must be transformed if they contain wildcard characters.
     #env.excludes = ['^{0}$'.format (e.replace ('*', '.*')) for e in env.excludes]
-    if (hasattr (env, 'excludes')):
-        env.excludes = [Path (p) for p in env.excludes]
+    if hasattr(env, 'excludes'):
+        env.excludes = [Path(p) for p in env.excludes]
     # If '--silent' is set as a script parameter, we remove the stream-handler
     # from the logger.
-    if (args.silent_mode):
+    if args.silent_mode:
         runcmdutils.remove_console_log_handler()
     # If there is a log-file name given in the list of options, we add a log
     # file handler for this.
-    if (args.log_file_name):
+    if args.log_file_name:
         env.log_file_name = args.log_file_name
-        runcmdutils.add_log_file_handler (env.log_file_name)
+        runcmdutils.add_log_file_handler(env.log_file_name)
     # Converts the string of --days-off to an integer
-    env.days_off = int (args.days_off_str)
+    env.days_off = int(args.days_off_str)
     # If a backup strategy is given, convert that string
     # into a number.
     if (args.backup_strategy):
-        env.backup_strategy = int (args.backup_strategy)
+        env.backup_strategy = int(args.backup_strategy)
     env.host_name = args.host_name
     env.source_dirs = args.source_dirs
     env.excluded_dirs = args.excluded_dirs
@@ -208,7 +207,7 @@ def init_env (args):
     env.preserve_path = args.preserve_path
     env.ignore_errors = args.ignore_errors
     # set the log level of all script output
-    #set_log_level("WARN")
+    set_log_level(args.log_level)
 
 
 

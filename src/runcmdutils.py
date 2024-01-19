@@ -48,22 +48,22 @@ class ProcessResult:
 
 def init_logger():
     global _logger_is_initialized
-    if (_logger_is_initialized == True):
+    if _logger_is_initialized == True:
         return
     _logger_is_initialized = True
-    _stdoutHandler.setFormatter (_logFormatter)
-    _stderrHandler.setFormatter (_logFormatter)
-    _log.addHandler (_stdoutHandler)
+    _stdoutHandler.setFormatter(_logFormatter)
+    _stderrHandler.setFormatter(_logFormatter)
+    _log.addHandler(_stdoutHandler)
     #log.addHandler (stderrHandler)
-    _log.setLevel (logging.INFO)
+    _log.setLevel(logging.INFO)
 
 
 
 # Adds a log-file handler to the logger instance we use in this script.
-def add_log_file_handler (fileName):
-    fileHandler = logging.FileHandler (fileName, mode = 'a', encoding = 'UTF-8')
-    fileHandler.setFormatter (_logFormatter)
-    _log.addHandler (fileHandler)
+def add_log_file_handler(fileName):
+    fileHandler = logging.FileHandler(fileName, mode = 'a', encoding = 'UTF-8')
+    fileHandler.setFormatter(_logFormatter)
+    _log.addHandler(fileHandler)
 
 
 
@@ -71,11 +71,11 @@ def add_log_file_handler (fileName):
 # is called when the option '--silent' has been given to this script.
 def remove_console_log_handler():
     global _stdoutHandler, _stderrHandler
-    if (_stdoutHandler != None):
-        _log.removeHandler (_stdoutHandler)
+    if _stdoutHandler != None:
+        _log.removeHandler(_stdoutHandler)
         _stdoutHandler = None
-    if (_stderrHandler != None):
-        _log.removeHandler (_stderrHandler)
+    if _stderrHandler != None:
+        _log.removeHandler(_stderrHandler)
         _stderrHandler = None
 
 
@@ -92,12 +92,13 @@ class LogLevel(Enum):
 def set_log_level(loglevel):
     logLevelNum = getattr(logging, loglevel.upper(), None)
     if not isinstance(logLevelNum, int):
-        raise ValueError('Invalid log level: %s' % loglevel)
-    logging.basicConfig(level = logLevelNum)
+        raise ValueError(f"Invalid log level: {loglevel}")
+    #logging.basicConfig(level = logLevelNum)
+    _log.setLevel(level = logLevelNum)
 
 
 
-def write_log (msg, level = LogLevel.INFO):
+def write_log(msg, level = LogLevel.INFO):
     log_functions = { LogLevel.DEBUG: _log.debug, LogLevel.INFO: _log.info, LogLevel.WARNING: _log.warning, LogLevel.CRITICAL: _log.critical, LogLevel.ERROR: _log.error }
     log_functions[level](msg)
 
@@ -113,15 +114,15 @@ _machines = {}
 def _mk_ssh_opts (hostkey):
     ssh_opts = ()
     scp_opts = ()
-    if (hostkey):
-        ssh_opts = ('-o', 'UserKnownHostsFile={0}'.format (hostkey))
-        scp_opts = ('-o', 'UserKnownHostsFile={0}'.format (hostkey))
+    if hostkey:
+        ssh_opts = ('-o', f"UserKnownHostsFile={hostkey}")
+        scp_opts = ('-o', f"UserKnownHostsFile={hostkey}")
     return (ssh_opts, scp_opts)
 
 
 
 def _mk_maching_context (username, hostname, *, port = None, password = None, opts = None):
-    if opts == None:
+    if opts is None:
         raise Exception('The parameter \'opts\' cannot be None.')
     new_machine = None
     if hostname:
