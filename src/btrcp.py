@@ -181,8 +181,6 @@ def init_env (args):
     global env
     #env = args
 
-    # At the moment we only support one backup strategy.
-    #env.backup_strategy = 1
     # All excludes must be transformed if they contain wildcard characters.
     #env.excludes = ['^{0}$'.format (e.replace ('*', '.*')) for e in env.excludes]
     if (hasattr (env, 'excludes')):
@@ -559,18 +557,18 @@ def _get_mount_point (path):
 def _get_possible_mount_point (path):
     mountPoint = None
     p = path.path
-    while (p != os.sep):
-        mountPoint = _get_mount_point (path._copy (p))
-        if (mountPoint):
+    while p != os.sep:
+        mountPoint = _get_mount_point(path._copy (p))
+        if mountPoint:
             break
-        p = os.path.dirname (p)
-    return path._copy (mountPoint)
+        p = os.path.dirname(p)
+    return path._copy(mountPoint)
 
 
 
 def _find_best_backup_strategy(destinationDir):
-    mountPoint = _get_possible_mount_point (destinationDir)
-    if (not _path_is_btrfs_subvolume (mountPoint)):
+    mountPoint = _get_possible_mount_point(destinationDir)
+    if not _path_is_btrfs_subvolume(mountPoint):
         return 2
     else:
         return 3

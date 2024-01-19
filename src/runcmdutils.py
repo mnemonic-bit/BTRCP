@@ -326,15 +326,15 @@ def mk_cmd (args, *, machine = None, stdin = None):
 def exec_cmd (cmd):
     global _env
 
-    write_log ('Executing command \'{0}\''. format(str(cmd)), level = LogLevel.INFO)
+    write_log('Executing command \'{0}\''. format(str(cmd)), level = LogLevel.DEBUG)
 
-    res = cmd.run (retcode = None, env = _env)
+    res = cmd.run(retcode = None, env = _env)
 
     # Log the output
     stdout = res[1]
-    if (stdout): write_log (stdout, level = LogLevel.INFO)
+    if stdout: write_log(stdout, level = LogLevel.DEBUG)
     stderr = res[2]
-    if (stderr): write_log (stderr, level = LogLevel.ERROR)
+    if stderr: write_log(stderr, level = LogLevel.ERROR)
 
     # Create a new instance to return the results of the subprocess call.
     procRes = ProcessResult
