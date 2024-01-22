@@ -23,7 +23,7 @@ from urllib.parse import urlparse
 
 
 # This is the version of the script.
-script_version='2.1.0'
+script_version='2.2.0'
 
 
 
@@ -59,6 +59,12 @@ class Environment:
     # Keep files in destination if they have been deleted in the
     # source directories
     sync_mode = False
+
+    # If set, BTRCP will output information about the destination host.
+    show_host_info = False
+
+    # If set, BTRCP will show, if possible, progress of the copy-process.
+    show_progress = False
 
     # Tells rsync to ignore read-errors
     ignore_errors = False
@@ -136,30 +142,33 @@ def init_arg_parser():
     parser.register('action', 'deprecated', DeprecateAction)
     parser.register('action', 'obsolete', ObsoleteAction)
 
-    parser.add_argument ('--source', '-s', dest = 'source_dirs', required = True, action = 'append', default = [], metavar='PATH', help='Specifies a source directories to backup. This option can be used multiple times in one command.')
-    parser.add_argument ('--source-dir', dest = 'source_dirs', required = False, action = 'deprecated', default = [], metavar='PATH', help='This argument has been deprecated and will be removed in future versions of this script\n Please use the option --source instead.')
-    parser.add_argument ('--exclude', '-e', dest = 'excluded_dirs', required = False, action = 'append', default = [], metavar='PATH', help='Specifies a source directories to backup. This option can be used multiple times in one command.')
-    parser.add_argument ('--exclude-dir', dest = 'excluded_dirs', required = False, action = 'deprecated', default = [], metavar='PATH', help='This argument has been deprecated and will be removed in future versions of this script\n Please use the option --exclude instead.')
-    parser.add_argument ('--dest-dir', '-d', dest = 'dest_dir', required = False, default='.', metavar='PATH', help='Specifies the destination directory where the backups will be written to.')
-    parser.add_argument ('--hostname', dest = 'host_name', required = False, metavar = 'NAME', default = None, help = 'sets the alternate hostname to be used instead of the local machines own hostname.')
-    parser.add_argument ('--strategy', dest = 'backup_strategy', required = False, metavar = 'NUM', default = None, help = 'sets the backup strategy to use. Supported values are 1, 2, 3, 4.')
-    parser.add_argument ('--days-off', dest = 'days_off_str', required = False, metavar = 'NUM', default = '2', help = 'set the number of days to offset the retention strategy, i.e. deletion of backups will only start after NUM days.')
-    #parser.add_argument ('--exclude', '-e', dest = 'excludes', required = False, action = 'append', default = [], metavar = 'FILE', help = 'gives of files or directories to exclude from the backup.')
-    parser.add_argument ('--stay-on-fs', dest = 'stay_on_file_system', required = False, action = 'store_const', const = True, help = 'recursion through sub-folders does not leave the bounds of a file-system.')
-    parser.set_defaults (stay_on_file_system = False)
-    parser.add_argument ('--preserve-path', dest = 'preserve_path', required = False, action = 'store_const', const = True, help = 'preserves the path structure from the source system when writing files to the destination.')
-    parser.set_defaults (preserve_path = False)
-    parser.add_argument ('--sync-mode', dest = 'sync_mode', required = False, action = 'store_const', const = True, help = 'deletes files in the destinatoin directory if they have been deleted in the source folder.')
-    parser.set_defaults (sync_mode = False)
-    parser.add_argument ('--ignore-errors', dest = 'ignore_errors', required = False, action = 'store_const', const = True, help = 'tells rsync (if used for the backup) to ignore read-errors.')
-    parser.set_defaults (ignore_errors = False)
-    parser.add_argument ('--log-file', dest = 'log_file_name', required = False, metavar = 'FILENAME', help = 'Specifies the name of a log file.')
-    parser.add_argument ('--log-level', '-l', dest = 'log_level', required = False, metavar = 'LEVEL', default = 'WARN', help = 'Specifies the log level useb by the script, valied values are DEBUG, INFO, WARN, WARNING, CRITICAL, and ERROR.')
-    parser.add_argument ('--quiet', dest = 'silent_mode', required = False, action = 'store_const', const = True, help = 'Suppresses all console output of this script.')
-    parser.set_defaults (silent_mode = False)
-    parser.add_argument ('--dry-run', dest = 'dry_run', required = False, action = 'store_const', const = True, help = 'Make this a dry-run, actions are only logged.')
-    parser.set_defaults (dry_run=False)
-    parser.add_argument ('--version', action = 'version', version = '%(prog)s {0}'.format (script_version))
+    parser.add_argument('--source', '-s', dest = 'source_dirs', required = True, action = 'append', default = [], metavar = 'PATH', help = 'Specifies a source directories to backup. This option can be used multiple times in one command.')
+    parser.add_argument('--source-dir', dest = 'source_dirs', required = False, action = 'deprecated', default = [], metavar = 'PATH', help = 'This argument has been deprecated and will be removed in future versions of this script\n Please use the option --source instead.')
+    parser.add_argument('--exclude', '-e', dest = 'excluded_dirs', required = False, action = 'append', default = [], metavar = 'PATH', help = 'Specifies a source directories to backup. This option can be used multiple times in one command.')
+    parser.add_argument('--exclude-dir', dest = 'excluded_dirs', required = False, action = 'deprecated', default = [], metavar = 'PATH', help = 'This argument has been deprecated and will be removed in future versions of this script\n Please use the option --exclude instead.')
+    parser.add_argument('--dest-dir', '-d', dest = 'dest_dir', required = False, default = '.', metavar = 'PATH', help = 'Specifies the destination directory where the backups will be written to.')
+    parser.add_argument('--hostname', dest = 'host_name', required = False, metavar = 'NAME', default = None, help = 'Sets the alternate hostname to be used instead of the local machines own hostname.')
+    parser.add_argument('--strategy', dest = 'backup_strategy', required = False, metavar = 'NUM', default = None, help = 'Sets the backup strategy to use. Supported values are 1, 2, 3, 4.')
+    parser.add_argument('--days-off', dest = 'days_off_str', required = False, metavar = 'NUM', default = '2', help = 'Set the number of days to offset the retention strategy, i.e. deletion of backups will only start after NUM days.')
+    parser.add_argument('--stay-on-fs', dest = 'stay_on_file_system', required = False, action = 'store_const', const = True, help = 'Recursion through sub-folders does not leave the bounds of a file-system.')
+    parser.set_defaults(stay_on_file_system = False)
+    parser.add_argument('--preserve-path', dest = 'preserve_path', required = False, action = 'store_const', const = True, help = 'Preserves the path structure from the source system when writing files to the destination.')
+    parser.set_defaults(preserve_path = False)
+    parser.add_argument('--sync-mode', dest = 'sync_mode', required = False, action = 'store_const', const = True, help = 'Deletes files in the destination directory if they have been deleted in the source folder.')
+    parser.set_defaults(sync_mode = False)
+    parser.add_argument('--ignore-errors', dest = 'ignore_errors', required = False, action = 'store_const', const = True, help = 'Tells rsync (if used for the backup) to ignore read-errors.')
+    parser.set_defaults(ignore_errors = False)
+    parser.add_argument('--log-file', dest = 'log_file_name', required = False, metavar = 'FILENAME', help = 'Specifies the name of a log file.')
+    parser.add_argument('--log-level', '-l', dest = 'log_level', required = False, metavar = 'LEVEL', default = 'INFO', help = 'Specifies the log level useb by the script, valied values are DEBUG, INFO, WARN, WARNING, CRITICAL, and ERROR.')
+    parser.add_argument('--show-progress', dest = 'show_progress', required = False, action = 'store_const', const = True, help = 'Shows the progress (if available but the acutal mechanism used).')
+    parser.set_defaults(show_progress = False)
+    parser.add_argument('--quiet', dest = 'silent_mode', required = False, action = 'store_const', const = True, help = 'Suppresses all console output of this script.')
+    parser.set_defaults(silent_mode = False)
+    parser.add_argument('--show-host-info', dest = 'show_host_info', required = False, action = 'store_const', const = True, help = 'Gathers information about the destination host, and displays them.')
+    parser.set_defaults(show_host_info = False)
+    parser.add_argument('--dry-run', dest = 'dry_run', required = False, action = 'store_const', const = True, help = 'Make this a dry-run, actions are only logged.')
+    parser.set_defaults(dry_run=False)
+    parser.add_argument('--version', action = 'version', version = '%(prog)s {0}'.format (script_version))
     return parser
 
 
@@ -205,7 +214,10 @@ def init_env (args):
     env.dest_dir = args.dest_dir
     env.stay_on_file_system = args.stay_on_file_system
     env.preserve_path = args.preserve_path
+    env.sync_mode = args.sync_mode
     env.ignore_errors = args.ignore_errors
+    env.show_host_info = args.show_host_info
+    env.show_progress = False if args.silent_mode else args.show_progress
     # set the log level of all script output
     set_log_level(args.log_level)
 
@@ -217,9 +229,9 @@ _deltaMap = { Deltas.Hour : ('hours', 1), Deltas.Day : ('days', 1), Deltas.Week 
 
 # Creates a time-diff instance from the Delta and the number of
 # times that delta should be applied.
-def _mk_timediff (delta, factor):
+def _mk_timediff(delta, factor):
     p = _deltaMap[delta]
-    return timedelta (**{ fst (p) : snd (p) * factor })
+    return timedelta(**{ fst (p) : snd (p) * factor })
 
 
 
@@ -229,25 +241,25 @@ def _mk_timediff (delta, factor):
 def _mk_datetime_boundaries():
     res = []
     now = datetime.datetime.now()
-    base = now - _mk_timediff (Deltas.Day, env.days_off)
+    base = now - _mk_timediff(Deltas.Day, env.days_off)
     for delta, factor in retentionIntervals:
-        base -= _mk_timediff (delta, factor)
-        res.append ((delta, base))
+        base -= _mk_timediff(delta, factor)
+        res.append((delta, base))
     return res
 
 
 
 # Parses the file name and returns a datetime instance which
 # represents the time equal to the name of the file.
-def _mk_datetime_from_file_name (fileName, *, suffix = None):
-    name = os.path.basename (fileName.rstrip (os.sep))
+def _mk_datetime_from_file_name(fileName, *, suffix = None):
+    name = os.path.basename(fileName.rstrip (os.sep))
 
     # remove the file suffix, if we provide such as a parameter,
     # and the file at hand ends with that suffix.
     if (suffix and name.endswith(suffix)):
         name = name[:-len(suffix)]
 
-    return datetime.datetime.strptime (name, env.timestampFormatString)
+    return datetime.datetime.strptime(name, env.timestampFormatString)
 
 
 
@@ -255,14 +267,14 @@ def _mk_datetime_from_file_name (fileName, *, suffix = None):
 # are defined globally. This function returns a list of tuples whose
 # first element is the Deltas-instance and the second element is the
 # list of files that belong to that Deltas-interval.
-def _mk_delta_groups (files):
+def _mk_delta_groups(files):
     bounds = _mk_datetime_boundaries()
-    files.sort (reverse = True, key = snd)
+    files.sort(reverse = True, key = snd)
     # filter those files that are younger than 'days_off'
     timeThreshold = datetime.datetime.now() - _mk_timediff (Deltas.Day, env.days_off)
     files = [f for f in files if snd (f) < timeThreshold]
 
-    write_log ('Bounds based on the retention intervals: {0}'.format (bounds))
+    write_log(f"Bounds based on the retention intervals: {bounds}")
 
     # This variable stores the groups we build.
     grps = []
@@ -272,21 +284,20 @@ def _mk_delta_groups (files):
     delta, lowerBound = bounds[idx]
     idx += 1
     for f in files:
-        #write_log ('delta={0}, lowerBound={1}, file-date=\'{2}\''.format (delta, lowerBound, snd (f)))
-        if (snd (f) > lowerBound):
-            grp.append (f)
+        if snd(f) > lowerBound:
+            grp.append(f)
         else:
-            if (idx < len (bounds)):
-                grps.append ((delta, grp))
+            if idx < len(bounds):
+                grps.append((delta, grp))
                 grp = []
-                grp.append (f)
+                grp.append(f)
                 idx += 1
                 delta, lowerBound = bounds[idx]
             else:
                 delta = None
-                grp.append (f)
+                grp.append(f)
 
-    grps.append ((delta, grp))
+    grps.append((delta, grp))
 
     return grps
 
@@ -303,8 +314,8 @@ def _delta_to_format_string (delta):
 # os.path.getctime (fileName), and returns a string represenation
 # suitable for grouping a list of floats with respect to a given
 # time interval.
-def _ctime_to_delta_string (tstmp, delta):
-    return tstmp.strftime (_delta_to_format_string (delta))
+def _ctime_to_delta_string(tstmp, delta):
+    return tstmp.strftime(_delta_to_format_string(delta))
 
 
 
@@ -314,16 +325,16 @@ def _ctime_to_delta_string (tstmp, delta):
 # element is the criteria that is shared by that group, and a list
 # of elements belonging to that group. The list of elements per group
 # has the same structure the input list had.
-def _groupby (lst, group_fn):
+def _groupby(lst, group_fn):
     return [(k, [g for g in grp]) for k, grp in itertools.groupby (lst, group_fn)]
 
 
 
-def _filter_all_but_max (grps, fn):
+def _filter_all_but_max(grps, fn):
     res = []
     for grp in grps:
-        mx = min (snd (grp), key = fn)
-        res.append ((fst (grp), [e for e in snd (grp) if e != mx]))
+        mx = min(snd(grp), key = fn)
+        res.append((fst (grp), [e for e in snd(grp) if e != mx]))
     return res
 
 
@@ -331,22 +342,22 @@ def _filter_all_but_max (grps, fn):
 # Takes a list of tuples of file names and their mtimes, and a time Delta
 # this group lies in, and returns a new list which only contains those
 # file names that can be removed.
-def _find_unretained_files (files, delta):
+def _find_unretained_files(files, delta):
     # Make a list of all file names that consists of tuples with their
     # first element being the group-by string based on the ctime of the
     # file, and the second element of the tuple bing the file name itself.
     #tpls = [(_ctime_to_delta_string (ctime, delta), (ctime, f)) for f, ctime in files]
     # Group this items according to the given delta.
-    grps = _groupby (files, lambda x: _ctime_to_delta_string (snd (x), delta))
+    grps = _groupby(files, lambda x: _ctime_to_delta_string(snd(x), delta))
     # Remove all files that we want to keep from the list
-    return _filter_all_but_max (grps, snd)
+    return _filter_all_but_max(grps, snd)
 
 
 
 # Removes all files that are listed in the parameter.
-def _remove_files (files):
+def _remove_files(files):
     for file in files:
-        _rm (file, is_folder = True if file.is_dir() else False)
+        _rm(file, is_folder = True if file.is_dir() else False)
 
 
 
@@ -363,95 +374,102 @@ def _remove_files (files):
 #    list we have obtained in step (2) and performs a delete-operation
 #    on the file system to remove each backup which is listed in our
 #    list.
-def _execute_retention_plan (path, *, pattern = None):
+def _execute_retention_plan(path, *, pattern = None):
     # Creates a list of files that lie in the given path and adds the
     # ctime of each file to each tuple of the list.
-    if (not pattern):
+    if not pattern:
         pattern = '*'
 
     wildcardPos = pattern.rfind('*')
     suffix = pattern if wildcardPos < 0 else pattern[wildcardPos + 1:]
-    fileNames = [(f, _mk_datetime_from_file_name (f.path, suffix = suffix)) for f in path.glob (pattern)]
+    fileNames = [(f, _mk_datetime_from_file_name(f.path, suffix = suffix)) for f in path.glob(pattern)]
 
     # TODO: group the file names according to the retention intervals
     # which are globally defined.
-    deltaGroups = _mk_delta_groups (fileNames)
+    deltaGroups = _mk_delta_groups(fileNames)
 
     # For each interval defined in our list of retention-intervals we
     # go and remove the files that are not ment to be retained.
     for delta, grp in deltaGroups:
-        fltrd = _find_unretained_files (grp, delta)
-        write_log ('Old backups that are removal-candidates for delta {0}: {1}'.format (delta, fltrd))
-        removeList = [fst (p) for p in concat ([snd (f) for f in fltrd])]
-        write_log ('Old backups that are being removed for delta {0}: {1}'.format (delta, [p.path for p in removeList]))
-        _remove_files (removeList)
+        fltrd = _find_unretained_files(grp, delta)
+        write_log(f"Old backups that are removal-candidates for delta {delta}: {fltrd}", level = LogLevel.DEBUG)
+        removeList = [fst (p) for p in concat ([snd(f) for f in fltrd])]
+        write_log(f"Old backups that are being removed for delta {delta}: {[p.path for p in removeList]}", level = LogLevel.DEBUG)
+        _remove_files(removeList)
 
 
 
 # Creates a directory at the given location
-def _mkdir (path):
-    res = run_cmd (['mkdir', '-p', str(path)], machine = path.get_context())
+def _mkdir(path):
+    res = run_cmd(['mkdir', '-p', str(path)], machine = path.get_context())
     return res.returncode
 
 
 
 # Moves a file from an old location/file-name to a new one.
-def _mv (old, new):
+def _mv(old, new):
     res = run_cmd (['mv', str(old), str(new)], machine = old.get_context())
     return res.returncode
 
 
 
 # Removes the file given as path parameter.
-def _rm (path, *, is_folder = False):
-    cmd_args = ['rm', str (path)]
-    if (is_folder):
-        cmd_args = ['rm', '-r', str (path)]
+def _rm(path, *, is_folder = False):
+    cmd_args = ['rm', str(path)]
+    if is_folder:
+        cmd_args = ['rm', '-r', str(path)]
     #cmd_args.extend (str (path))
-    res = run_cmd (cmd_args, machine = path.get_context())
+    res = run_cmd(cmd_args, machine = path.get_context())
     return res.returncode
 
 
 
+# Sets the access flags of a file or folder. The mode must be given as a string,
+# even if its the numerical encoding like '700' instead of 'u+rwx,g-rwx,o-rwx'
+def _chmod(path, mode):
+    res = run_cmd (['chmod', mode, str(path)], machine = path.get_context())
+    return res.returncode
+
+
 # Returns the hostname of the current machine.
 def _hostname():
-    res = run_cmd (['hostname'])
+    res = run_cmd(['hostname'])
     return res.stdout.strip()
 
 
 
 # Measures the size of the path.
-def _du (path):
-    cmd_args = ['du', '-shx', str (path)]
-    res = run_cmd (cmd_args, machine = path.get_context())
-    if (res.returncode == 0):
-        return fst (res.stdout.rstrip().split())
+def _du(path):
+    cmd_args = ['du', '-shx', str(path)]
+    res = run_cmd(cmd_args, machine = path.get_context())
+    if res.returncode == 0:
+        return fst(res.stdout.rstrip().split())
     return None
 
 
 
 # Creates a g-zipped tar file from the current work directory and writes
 # the archive to the file given by the parameter backupFileName.
-def _create_tar_of_directory (backupFileName, files, *, excludes = []):
-    if (backupFileName.get_context() != pb.local):
+def _create_tar_of_directory(backupFileName, files, *, excludes = []):
+    if backupFileName.get_context() != pb.local:
         args = ['tar', '--numeric-owner', '-czf', '--sparse', '-']
         for ex in excludes:
             args.extend (['--exclude', str(ex)])
-        args.extend ([str(f) for f in files])
-        tar_cmd = mk_cmd (args)
-        tee_cmd = mk_cmd (['tee', str(backupFileName)], machine = backupFileName.get_context())
+        args.extend([str(f) for f in files])
+        tar_cmd = mk_cmd(args)
+        tee_cmd = mk_cmd(['tee', str(backupFileName)], machine = backupFileName.get_context())
         cmd = tar_cmd | tee_cmd
     else:
         args = ['tar', '--numeric-owner', '-czf', str(backupFileName)]
         for ex in excludes:
-            args.extend (['--exclude', str(ex)])
-        args.extend ([str(f) for f in files])
-        tar_cmd = mk_cmd (args)
+            args.extend(['--exclude', str(ex)])
+        args.extend([str(f) for f in files])
+        tar_cmd = mk_cmd(args)
         cmd = tar_cmd
     res = cmd.run()
     # The return-code is stored in the first element of the result-triple
     # that is returned by the call to run().
-    return fst (res)
+    return fst(res)
 
 
 
@@ -459,12 +477,12 @@ def _create_tar_of_directory (backupFileName, files, *, excludes = []):
 # with a separator character ('/') if it designates a directory. Conversely
 # the source path must not end with a slash if it references a file instead
 # of a folder.
-def _rsync (sources, dest, *, excludes = [], stayOnFS = True, preservePath = False, syncMode = False, ignoreErrors = False):
+def _rsync(sources, dest, *, excludes = [], stayOnFS = True, preservePath = False, syncMode = False, showProgress = False, ignoreErrors = False):
     # If we sync a single file, we must not append a slash to the
     # path, otherwise rsync will run into an error.
     src = [str(source) for source in sources]
     dst = str(dest)
-    if (dest.is_remote_path()):
+    if dest.is_remote_path():
         dst = dest.full_path()
     else:
         # In case this is not a remote path, changes are that
@@ -472,24 +490,31 @@ def _rsync (sources, dest, *, excludes = [], stayOnFS = True, preservePath = Fal
         # To prevent this, we 
         excludes.append(dst)
 
-    # TODO: add the option '-X' to that call after figuring out why
-    # not all rsync calls succeed.
-    args = ['rsync', '-a', '-A', '--sparse']
-    if (preservePath):
+    # Build all options we want to pass to rsync. There are some
+    # standard-values, and after that, some optional ones.
+    args = ['rsync', '-a', '-A', '-X', '--sparse', '--numeric-ids']
+    if preservePath:
         args.append('--relative')
-    if (stayOnFS):
+    if stayOnFS:
         args.append('-x')
-    if (ignoreErrors):
+    if ignoreErrors:
         args.append('--ignore-errors')
-    if (syncMode):
+    if syncMode:
         args.append('--delete')
+    if showProgress:
+        args.append('--progress')
     for ex in excludes:
         args.extend(['--exclude', str(ex)])
-    # Extend the arguments of rsync with the source and destination.
-    args.extend (src)
-    args.append (dst)
+    
+    # Append all sources and the destination.
+    args.extend(src)
+    args.append(dst)
 
-    res = run_cmd (args)
+    if showProgress:
+        res = run_cmd(args, stdout = sys.stdout)
+    else:
+        res = run_cmd(args)
+
     return res.returncode
 
 
@@ -497,11 +522,11 @@ def _rsync (sources, dest, *, excludes = [], stayOnFS = True, preservePath = Fal
 # Returns the path to the btrfs command binaries. This is needed to make sure
 # that the PATH environment of the Python script includes it.
 def _find_btrfs_cmd_path():
-    res = run_cmd (['which', 'btrfs'])
+    res = run_cmd(['which', 'btrfs'])
     # If the result starts with a path-separator we suppose that its an actual
     # path as a result returned from the command 'which'. Otherwise it is an
     # error message.
-    if (res.stdout.startswith (os.path.sep)):
+    if res.stdout.startswith (os.path.sep):
         return os.path.dirname(res.stdout)
     return None
 
@@ -511,16 +536,16 @@ def _find_btrfs_cmd_path():
 # if that is the case, or False otherwise.
 # Note that this function returns False if the path reaches deeper beyond the
 # root of the subvolume.
-def _path_is_btrfs_subvolume (path):
+def _path_is_btrfs_subvolume(path):
     #> stat -f --format="%T" "$dir")" == "btrfs" => return 1
     #> stat --format="%i" "$dir" => 2 | 256 => return 0, otherwise return 1
-    res = run_cmd (['stat', '-f', '--format=%T', str(path)], machine = path.get_context())
+    res = run_cmd(['stat', '-f', '--format=%T', str(path)], machine = path.get_context())
     out = res.stdout.strip()
-    if (out != 'btrfs'):
+    if out != 'btrfs':
         return False
-    res = run_cmd (['stat', '--format=%i', str(path)], machine = path.get_context())
+    res = run_cmd(['stat', '--format=%i', str(path)], machine = path.get_context())
     out = int(res.stdout.strip())
-    if (out in [2, 256]):
+    if out in [2, 256]:
         return True
     return False
 
@@ -535,25 +560,25 @@ def _create_btrfs_subvolume (subvolPath):
 
 # Creates a BTRFS shanpshot for a given subvolume at the requested locatoin.
 def _create_btrfs_snapshot (subvolPath, snapshotPath, *, readOnly = False):
-    if (readOnly):
-        res = run_cmd (['btrfs', 'subvolume', 'snapshot', '-r', str(subvolPath), str(snapshotPath)], machine = subvolPath.get_context())
+    if readOnly:
+        res = run_cmd(['btrfs', 'subvolume', 'snapshot', '-r', str(subvolPath), str(snapshotPath)], machine = subvolPath.get_context())
     else:
-        res = run_cmd (['btrfs', 'subvolume', 'snapshot', str(subvolPath), str(snapshotPath)], machine = subvolPath.get_context())
+        res = run_cmd(['btrfs', 'subvolume', 'snapshot', str(subvolPath), str(snapshotPath)], machine = subvolPath.get_context())
     return res.returncode
 
 
 
 # returns the mount point from where the path actually starts in the current
 # file system hirarchy.
-def _get_mount_point (path):
-    res = run_cmd (['stat', '-c', '%m', str(path)], machine = path.get_context())
-    if (res.returncode == 0):
+def _get_mount_point(path):
+    res = run_cmd(['stat', '-c', '%m', str(path)], machine = path.get_context())
+    if res.returncode == 0:
         return res.stdout.rstrip()
     return None
 
 
 
-def _get_possible_mount_point (path):
+def _get_possible_mount_point(path):
     mountPoint = None
     p = path.path
     while p != os.sep:
@@ -574,9 +599,9 @@ def _find_best_backup_strategy(destinationDir):
 
 
 
-def _get_most_recent_backup_dir (hostName, destinationDir):
-    destBaseDir = destinationDir.join (hostName)
-    mostRecentBackupDir = max (destBaseDir.glob ('{0}/'.format (env.timestampGlobPattern)), key = lambda p: p.get_last_part(), default = None)
+def _get_most_recent_backup_dir(hostName, destinationDir):
+    destBaseDir = destinationDir.join(hostName)
+    mostRecentBackupDir = max(destBaseDir.glob (f"{env.timestampGlobPattern}/"), key = lambda p: p.get_last_part(), default = None)
     return mostRecentBackupDir
 
 
@@ -584,47 +609,42 @@ def _get_most_recent_backup_dir (hostName, destinationDir):
 # Implements the second backup strategy:
 # Uses tar to zip up all source directories and write them as a single
 # file to the destination directory.
-def backup_strategy_1 (hostName, sourceDirs, destinationDir, *, excludes = [], stayOnFS = True, preservePath = False, ignoreErrors = False):
-    tarBaseDir = destinationDir.join (hostName)
-    _mkdir (tarBaseDir)
+def backup_strategy_1(hostName, sourceDirs, destinationDir, *, excludes = [], stayOnFS = True, preservePath = False, syncMode = False, showProgress = False, ignoreErrors = False):
+    tarBaseDir = destinationDir.join(hostName)
+    _mkdir(tarBaseDir)
 
-    tarFileName = datetime.datetime.now().strftime ('{0}.tar.gz'.format (env.timestampFormatString))
-    tarBackupFile = tarBaseDir.join (tarFileName)
-
-    #backedUpFiles = []
-    #for dir in sourceDirs:
-    #    backedUpFiles.extend(dir.glob ('*'))
+    tarFileName = datetime.datetime.now().strftime (f"{env.timestampFormatString}.tar.gz")
+    tarBackupFile = tarBaseDir.join(tarFileName)
 
     #exitCode = _create_tar_of_directory(tarBackupFile, backedUpFiles)
     exitCode = _create_tar_of_directory(tarBackupFile, sourceDirs)
-    if (exitCode != 0):
-        write_log ('Creating a tar-archive failed for host \'{0}\' with exit code \'{1}\''.format (hostName, exitCode))
-        if (not _mv (tarBackupFile, tarBackupFile + '.err')):
-            write_log ('Moving tar-archive during error handling failed for host \'{0}\'.'.format (hostName))
+    if exitCode != 0:
+        write_log(f"Creating a tar-archive failed for host '{hostName}' with exit code '{exitCode}'", level = LogLevel.ERROR)
+        if not _mv (tarBackupFile, tarBackupFile + '.err'):
+            write_log(f"Moving tar-archive during error handling failed for host '{hostName}'.", level = LogLevel.ERROR)
         return False
 
-    write_log ('Backup file successfully created for host \'{0}\''.format (hostName))
+    write_log(f"Backup file successfully created for host '{hostName}'")
 
     # At the end we remove old backups that are no longer needed.
-    _execute_retention_plan (tarBaseDir, pattern = '*.tar.gz')
+    _execute_retention_plan(tarBaseDir, pattern = '*.tar.gz')
 
     return True
 
 
 
 # Backs up multiple source directories using rsync.
-def backup_rsync_source_dirs (sourceDirs, destinationDir, *, excludes = [], stayOnFS = True, preservePath = False, syncMode = False, ignoreErrors = False):
+def backup_rsync_source_dirs(sourceDirs, destinationDir, *, excludes = [], stayOnFS = True, preservePath = False, syncMode = False, showProgress = False, ignoreErrors = False):
     # Measure the size of the backup
     for sourceDir in sourceDirs:
-        write_log ('The size of the source {0} is: {1}.'.format (sourceDir.path, _du (sourceDir)))
+        write_log(f"The size of the source '{sourceDir.path}' is: {_du (sourceDir)}.")
 
     # If this is a folder, then we remove any trailing path separators
     # from the source directory parameter.
     srcDirs = [sourceDir if sourceDir.is_file() else sourceDir.join ('') for sourceDir in sourceDirs]
 
-    exitCode = _rsync (srcDirs, destinationDir, excludes = excludes, stayOnFS = stayOnFS, preservePath = preservePath, syncMode = syncMode, ignoreErrors = ignoreErrors)
-    if (exitCode != 0):
-        #write_log ('Copying {0} \'{1}\' with rsync failed with exit code \'{2}\''.format ('file' if sourceDir.is_file() else 'directory', sourceDir, exitCode))
+    exitCode = _rsync(srcDirs, destinationDir, excludes = excludes, stayOnFS = stayOnFS, preservePath = preservePath, syncMode = syncMode, showProgress = showProgress, ignoreErrors = ignoreErrors)
+    if exitCode != 0:
         return False
 
     return True
@@ -637,9 +657,9 @@ def backup_rsync_source_dirs (sourceDirs, destinationDir, *, excludes = [], stay
 # method uses rsync to move all files between locatoins.
 # This strategy does not execute any retention plan because it overwrites
 # older backups in place.
-def backup_strategy_2 (hostName, sourceDirs, destinationDir, *, excludes = [], stayOnFS = True, preservePath = False, syncMode = False, ignoreErrors = False):
-    rsyncDestDir = destinationDir.join (hostName)
-    return  backup_rsync_source_dirs (sourceDirs, rsyncDestDir, excludes = excludes, stayOnFS = stayOnFS, preservePath = preservePath, syncMode = syncMode, ignoreErrors = ignoreErrors)
+def backup_strategy_2(hostName, sourceDirs, destinationDir, *, excludes = [], stayOnFS = True, preservePath = False, syncMode = False, showProgress = False, ignoreErrors = False):
+    rsyncDestDir = destinationDir.join(hostName)
+    return  backup_rsync_source_dirs(sourceDirs, rsyncDestDir, excludes = excludes, stayOnFS = stayOnFS, preservePath = preservePath, syncMode = syncMode, showProgress = showProgress, ignoreErrors = ignoreErrors)
 
 
 
@@ -648,59 +668,69 @@ def backup_strategy_2 (hostName, sourceDirs, destinationDir, *, excludes = [], s
 # in the destination location to better track the backup process over time.
 # This assumes that the backup destination has already set up a btrfs subvolume
 # to snapshot. If the destination folder is not 
-def backup_strategy_3 (hostName, sourceDirs, destinationDir, *, excludes = [], stayOnFS = True, preservePath = False, syncMode = False, ignoreErrors = False):
-    destBaseDir = destinationDir.join (hostName)
-    destDirName = datetime.datetime.now().strftime (env.timestampFormatString)
-    destBtrfsDir = destBaseDir.join (destDirName)
+def backup_strategy_3(hostName, sourceDirs, destinationDir, *, excludes = [], stayOnFS = True, preservePath = False, syncMode = False, showProgress = False, ignoreErrors = False):
+    destBaseDir = destinationDir.join(hostName)
+    destDirName = datetime.datetime.now().strftime(env.timestampFormatString)
+    destBtrfsDir = destBaseDir.join(destDirName)
 
     # Find the mount point of the destination directory and check
     # if it is a BTRFS subvolume, otherweise this strategy will not
     # work properly.
-    mountPoint = _get_possible_mount_point (destBaseDir)
-    if (not _path_is_btrfs_subvolume (mountPoint)):
-        write_log ('The given destination directory is not a BTRFS subvolume and cannot be used as a destination for the choosen backup strategy 3 of host \'{0}\'.'.format (hostName))
+    mountPoint = _get_possible_mount_point(destBaseDir)
+    if not _path_is_btrfs_subvolume (mountPoint):
+        write_log(f"The given destination directory is not a BTRFS subvolume and cannot be used as a destination for the choosen backup strategy 3 of host '{hostName}'.", level = LogLevel.WARNING)
         return False
 
     # Ensure that the destination base path exists and is a folder indeed.
-    if (not destBaseDir.is_dir()):
-        if (destBaseDir.exists()):
-            write_log ('The destination director \'{0}\' already exists as a file. ({1})'.format (destBaseDir, hostName))
+    if not destBaseDir.is_dir():
+        if destBaseDir.exists():
+            write_log(f"The destination directory '{destBaseDir}' already exists as a file. (hostname: {hostName})", level = LogLevel.ERROR)
             return False
-        _mkdir (destBaseDir)
+        _mkdir(destBaseDir)
 
     # Also ensure that the destination directory for the backup does not exist,
     # which we take as a sign that we would be overwriting someone else's data.
-    if (destBtrfsDir.is_dir()):
-        write_log ('The backup destination directory \'{0}\' already exists. ({1})'.format (destBtrfsDir, hostName))
+    if destBtrfsDir.is_dir():
+        write_log(f"The backup destination directory '{destBtrfsDir}' already exists. (hostname: {hostName})", level = LogLevel.ERROR)
         return False
-    if (destBtrfsDir.exists()):
-        write_log ('The backup destination directory \'{0}\' already exists as a file. ({1})'.format (destBtrfsDir, hostName))
+    if destBtrfsDir.exists():
+        write_log(f"The backup destination directory '{destBtrfsDir}' already exists as a file. (hostname: {hostName})", level = LogLevel.ERROR)
         return False
         
     # Get the most recent backup:
     # This command lists all directories whose names match our date-pattern
     # we use when we create backup directories.
-    mostRecentBackupDir = _get_most_recent_backup_dir (hostName, destinationDir)
-    write_log ('The most recent backup of host \'{0}\' is \'{1}\''.format (hostName, mostRecentBackupDir))
+    mostRecentBackupDir = _get_most_recent_backup_dir(hostName, destinationDir)
+    write_log(f"The most recent backup of host '{hostName}' is '{mostRecentBackupDir}'")
     
     # if there is no backup to build on, we have to create a new subvolume
-    if (mostRecentBackupDir == None or not _path_is_btrfs_subvolume (mostRecentBackupDir)):
-        exitCode = _create_btrfs_subvolume (destBtrfsDir)
-        if (exitCode != 0):
-            write_log ('Creating a BTRFS subvolume failed with exit code {0}.'.format (exitCode))
+    if mostRecentBackupDir == None or not _path_is_btrfs_subvolume(mostRecentBackupDir):
+        exitCode = _create_btrfs_subvolume(destBtrfsDir)
+        if exitCode != 0:
+            write_log(f'Creating a BTRFS subvolume failed with exit code {exitCode}.', level = LogLevel.ERROR)
+            return False
+        # Change the access mode, just in case the umask if not set properly.
+        exitCode = _chmod(destBtrfsDir, '700')
+        if exitCode != 0:
+            write_log(f'Changing the access flags of the new BTRFS subvolume failed with exit code {exitCode}.', level = LogLevel.ERROR)
             return False
     else:
         # Create a snapshot from the latest backup which we will use to rsync
         # our current contents to.
-        exitCode = _create_btrfs_snapshot (mostRecentBackupDir, destBtrfsDir)
+        exitCode = _create_btrfs_snapshot(mostRecentBackupDir, destBtrfsDir)
         if (exitCode != 0):
-            write_log ('Creating BTRFS snapshot failed with exit code {0}.'.format (exitCode))
+            write_log (f'Creating BTRFS snapshot failed with exit code {exitCode}.')
+            return False
+        # Change the access mode, just in case the umask if not set properly.
+        exitCode = _chmod(destBtrfsDir, '700')
+        if exitCode != 0:
+            write_log(f'Changing the access flags of the new BTRFS snapshot failed with exit code {exitCode}.', level = LogLevel.ERROR)
             return False
 
     # From here it really is the same as in strategy 2:
     # we just rsync everything to its destination directory, while
     # the destination is located inside a BTRFS volume or snapshot.
-    backup_rsync_source_dirs (sourceDirs, destBtrfsDir, excludes = excludes, stayOnFS = stayOnFS, preservePath = preservePath, syncMode = syncMode, ignoreErrors = ignoreErrors)
+    backup_rsync_source_dirs(sourceDirs, destBtrfsDir, excludes = excludes, stayOnFS = stayOnFS, preservePath = preservePath, syncMode = syncMode, showProgress = showProgress, ignoreErrors = ignoreErrors)
 
     # At the end we remove old backups that are no longer needed.
     #_execute_retention_plan (destBaseDir, pattern = '{0}/'.format (env.timestampGlobPattern))
@@ -713,7 +743,7 @@ def backup_strategy_3 (hostName, sourceDirs, destinationDir, *, excludes = [], s
 # If the root filesystem of the source is a BTRFS subvolume, we can make
 # use of this and create a snapshot, before sending the difference to the
 # backup location itself. For this we will use btrfs send and receive.
-def backup_strategy_4 (hostName, sourceDir, destinationDir, *, excludes = [], ignoreErrors = False):
+def backup_strategy_4(hostName, sourceDir, destinationDir, *, excludes = [], syncMode = False, showProgress = False, ignoreErrors = False):
     
     
     
@@ -721,10 +751,61 @@ def backup_strategy_4 (hostName, sourceDir, destinationDir, *, excludes = [], ig
 
 
 
+class HostCapabilities:
+    # The user that is actually used to execute all commands
+    acutal_user = ''
+    # The full qualified hostname
+    full_hostname = ''
+    # The hostname (possibly shortened, depending on the host's semantics of the command "hostname")
+    short_hostname = ''
+    # The path to the rsync command, if it is installed, on None otherwise
+    rsync_path = None
+    # The path to the btrfs command, if it is installed, on None otherwise
+    btrfs_path = None
+
+    def __str__(self):
+        return f"Actual user: {self.acutal_user}\nFull host name: {self.full_hostname}\nShort host name: {self.short_hostname}\nrsync path: {self.rsync_path}\nbtrfs path: {self.btrfs_path}"
+
+
+
+# Gathers information about the destination host system. The destination
+# is defined as the machine where the destination path is pointing at.
+def _gather_host_information(machine = None):
+    capabilities = HostCapabilities
+
+    # executing user
+    res = run_cmd(['whoami'], machine = machine)
+    capabilities.acutal_user = res
+
+    # full hostname
+    res = run_cmd(['hostname', '-f'], machine = machine)
+    capabilities.full_hostname = res
+
+    # short hostname
+    res = run_cmd(['hostname'], machine = machine)
+    capabilities.short_hostname = res
+
+    # show the umask of the user
+    #res = run_cmd(['umask'], machine = machine)
+    #write_log(f"umask: {res.stdout.strip()}")
+    # check if rsync is installed
+    res = run_cmd(['which', 'rsync'], machine = machine)
+    if res:
+        capabilities.rsync_path = res
+
+    # check if btrfs is installed
+    res = run_cmd(['which', 'btrfs'], machine = machine)
+    if res:
+        capabilities.btrfs_path = res
+
+    return capabilities
+
+
+
 # This is the main entry point for other scripts if this file is used as
 # a module. The parameters passed to this method will come form the list
 # of parameters if this file is started as a script.
-def backup (hostName, sourceDirs, destinationDir, *, strategy = None, excludes = [], days_off = 1, stayOnFS = True, preservePath = False, syncMode = False, ignoreErrors = False):
+def backup(hostName, sourceDirs, destinationDir, *, strategy = None, excludes = [], days_off = 1, stayOnFS = True, preservePath = False, syncMode = False, showProgress = False, ignoreErrors = False):
     # Defines for each backup strategy the function that implements it,
     # and a string pattern that can be used for globbing the destination
     # directory for backups.
@@ -732,30 +813,34 @@ def backup (hostName, sourceDirs, destinationDir, *, strategy = None, excludes =
 
     # Turn all path-strings into Path-instances
     _src = [Path (p) for p in sourceDirs]
-    _dst = Path (destinationDir)
+    _dst = Path(destinationDir)
     _excludes = [Path (p) for p in excludes]
+
+    if env.show_host_info:
+        capabilities = _gather_host_information(_dst.get_context())
+        write_log(f"Destination host capabilities:\n{capabilities}")
 
     if strategy is None:
         strategy = _find_best_backup_strategy(_dst)
 
-    write_log ('Starting backup with strategy \'{0}\' for host \'{1}\''.format (strategy, hostName))
+    write_log('Starting backup with strategy \'{0}\' for host \'{1}\''.format (strategy, hostName))
 
-    strategies[strategy](hostName, _src, _dst, excludes = _excludes, stayOnFS = stayOnFS, preservePath = preservePath, syncMode = syncMode, ignoreErrors = ignoreErrors)
+    strategies[strategy](hostName, _src, _dst, excludes = _excludes, stayOnFS = stayOnFS, preservePath = preservePath, syncMode = syncMode, showProgress = showProgress, ignoreErrors = ignoreErrors)
 
 
 
 def start_backup():
     # If no alternate hostname was passed as parameter to the script,
     # we query it from the system.
-    if (env.host_name == None):
+    if env.host_name is None:
         env.host_name = _hostname()
-    backup (env.host_name, env.source_dirs, env.dest_dir, strategy = env.backup_strategy, excludes = env.excluded_dirs, stayOnFS = env.stay_on_file_system, preservePath = env.preserve_path, syncMode = env.sync_mode, ignoreErrors = env.ignore_errors)
+    backup(env.host_name, env.source_dirs, env.dest_dir, strategy = env.backup_strategy, excludes = env.excluded_dirs, stayOnFS = env.stay_on_file_system, preservePath = env.preserve_path, syncMode = env.sync_mode, showProgress = env.show_progress, ignoreErrors = env.ignore_errors)
 
 
 
 def inner_main(*args):
-    args = parse_args (*args)
-    init_env (args)
+    args = parse_args(*args)
+    init_env(args)
     start_backup()
     return 0
 
@@ -791,5 +876,4 @@ init_module()
 # Start the main method if we were called as a script.
 if __name__ == '__main__':
     sys.exit(main())
-
 
