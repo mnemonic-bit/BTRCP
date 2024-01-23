@@ -48,22 +48,22 @@ class ProcessResult:
 
 def init_logger():
     global _logger_is_initialized
-    if (_logger_is_initialized == True):
+    if _logger_is_initialized == True:
         return
     _logger_is_initialized = True
-    _stdoutHandler.setFormatter (_logFormatter)
-    _stderrHandler.setFormatter (_logFormatter)
-    _log.addHandler (_stdoutHandler)
+    _stdoutHandler.setFormatter(_logFormatter)
+    _stderrHandler.setFormatter(_logFormatter)
+    _log.addHandler(_stdoutHandler)
     #log.addHandler (stderrHandler)
-    _log.setLevel (logging.INFO)
+    _log.setLevel(logging.INFO)
 
 
 
 # Adds a log-file handler to the logger instance we use in this script.
-def add_log_file_handler (fileName):
-    fileHandler = logging.FileHandler (fileName, mode = 'a', encoding = 'UTF-8')
-    fileHandler.setFormatter (_logFormatter)
-    _log.addHandler (fileHandler)
+def add_log_file_handler(fileName):
+    fileHandler = logging.FileHandler(fileName, mode = 'a', encoding = 'UTF-8')
+    fileHandler.setFormatter(_logFormatter)
+    _log.addHandler(fileHandler)
 
 
 
@@ -71,11 +71,11 @@ def add_log_file_handler (fileName):
 # is called when the option '--silent' has been given to this script.
 def remove_console_log_handler():
     global _stdoutHandler, _stderrHandler
-    if (_stdoutHandler != None):
-        _log.removeHandler (_stdoutHandler)
+    if _stdoutHandler != None:
+        _log.removeHandler(_stdoutHandler)
         _stdoutHandler = None
-    if (_stderrHandler != None):
-        _log.removeHandler (_stderrHandler)
+    if _stderrHandler != None:
+        _log.removeHandler(_stderrHandler)
         _stderrHandler = None
 
 
@@ -92,12 +92,12 @@ class LogLevel(Enum):
 def set_log_level(loglevel):
     logLevelNum = getattr(logging, loglevel.upper(), None)
     if not isinstance(logLevelNum, int):
-        raise ValueError('Invalid log level: %s' % loglevel)
-    logging.basicConfig(level = logLevelNum)
+        raise ValueError(f"Invalid log level: {loglevel}")
+    _log.setLevel(level = logLevelNum)
 
 
 
-def write_log (msg, level = LogLevel.INFO):
+def write_log(msg, level = LogLevel.INFO):
     log_functions = { LogLevel.DEBUG: _log.debug, LogLevel.INFO: _log.info, LogLevel.WARNING: _log.warning, LogLevel.CRITICAL: _log.critical, LogLevel.ERROR: _log.error }
     log_functions[level](msg)
 
@@ -110,22 +110,22 @@ _machines = {}
 
 
 
-def _mk_ssh_opts (hostkey):
+def _mk_ssh_opts(known_hosts_file, *, keyfile = None):
     ssh_opts = ()
     scp_opts = ()
-    if (hostkey):
-        ssh_opts = ('-o', 'UserKnownHostsFile={0}'.format (hostkey))
-        scp_opts = ('-o', 'UserKnownHostsFile={0}'.format (hostkey))
-    return (ssh_opts, scp_opts)
+    if known_hosts_file:
+        ssh_opts = ('-o', f"UserKnownHostsFile={known_hosts_file}")
+        scp_opts = ('-o', f"UserKnownHostsFile={known_hosts_file}")
+    return (ssh_opts, scp_opts, keyfile)
 
 
 
-def _mk_maching_context (username, hostname, *, port = None, password = None, opts = None):
-    if opts == None:
+def _mk_maching_context(username, hostname, *, port = None, password = None, opts = None):
+    if opts is None:
         raise Exception('The parameter \'opts\' cannot be None.')
     new_machine = None
     if hostname:
-        new_machine = pb.SshMachine(hostname, port = port, user = username, password = password, ssh_opts = opts[0], scp_opts = opts[1])
+        new_machine = pb.SshMachine(hostname, port = port, user = username, password = password, ssh_opts = opts[0], scp_opts = opts[1], keyfile = opts[2])
     else:
         new_machine = _get_local_machine_context()
     return new_machine
@@ -135,12 +135,12 @@ def _mk_maching_context (username, hostname, *, port = None, password = None, op
 # Returns an appropriate (plumbum-) machine instance for the path.
 # The path that is given as parameter for this function must be a
 # ParseResult of a parseurl()-call.
-def _select_machine_context (username, hostname, *, port = None, password = None, hostkey = None):
+def _select_machine_context(username, hostname, *, port = None, password = None, known_hosts_file = None, keyfile = None):
     global _machines
-    key = '{0}@{1}:{2}'.format (username, '' if hostname == None else hostname, '' if port == None else str (port))
-    ssh_opts = _mk_ssh_opts (hostkey)
-    if (key not in _machines or key in _machines and not _machines[key][1] == ssh_opts[0]):
-        new_machine = _mk_maching_context (username, hostname, port = port, password = password, opts = ssh_opts)
+    key = f"{username}@{'' if hostname == None else hostname}:{'' if port == None else str (port)}"
+    ssh_opts = _mk_ssh_opts(known_hosts_file, keyfile = keyfile)
+    if key not in _machines or key in _machines and not _machines[key][1] == ssh_opts[0]:
+        new_machine = _mk_maching_context(username, hostname, port = port, password = password, opts = ssh_opts)
         _machines[key] = (new_machine, *ssh_opts)
     return _machines[key][0]
 
@@ -162,41 +162,40 @@ class Path(object):
     _port = None
     _username = None
 
-    def __init__ (self, path = None, * , machine = None):
-        if (path is not None and not isinstance (path, str)):
+    def __init__(self, path = None, * , machine = None):
+        if path is not None and not isinstance(path, str):
             raise EnvironmentError()
         # For the copy constructor, just return
-        if (not path):
+        if not path:
             self.path = None
             self._machineContext = None
             self._hostname = None
             self._username = None
             return
 
-        # Add a scheme, if no scheme was given, assumint that it is SSH
-        if (':' in path):
-            if ('://' not in path):
+        # Add a scheme, if no scheme was given, assuming that it is SSH
+        if ':' in path:
+            if '://' not in path:
                 path = 'ssh://' + path
 
-        parsedUri = urlparse (path)
+        parsedUri = urlparse(path)
         self._hostname = parsedUri.hostname
         self._username = parsedUri.username
         self._port = parsedUri.port
-        if (machine):
+        if machine:
             self._machineContext = machine
         else:
-            self._machineContext = _select_machine_context (parsedUri.username, parsedUri.hostname)
-        #self.path = self._machineContext.env.expanduser (parsedUri.path)
+            self._machineContext = _select_machine_context(parsedUri.username, parsedUri.hostname)
         self.path = parsedUri.path
-        self._machinePath = self._machineContext.path (parsedUri.path)
+        self._machinePath = self._machineContext.path(parsedUri.path)
 
     # This is the copy-constructor.
-    def _copy (self, path):
-        if (not isinstance (path, str)):
+    def _copy(self, path):
+        if not isinstance (path, str):
             raise EnvironmentError()
         newPath = Path()
         newPath.path = path
-        newPath._machinePath = self._machineContext.path (path)
+        newPath._machinePath = self._machineContext.path(path)
         newPath._machineContext = self._machineContext
         newPath._hostname = self._hostname
         newPath._port = self._port
@@ -205,36 +204,36 @@ class Path(object):
 
     # Expands user-directories which in Linux this is represented by a tilde (~)
     # into an absolute path.
-    def expanduser (self):
-        expanded_path = self._machineContext.env.expanduser (self.path)
-        return self._copy (expanded_path)
+    def expanduser(self):
+        expanded_path = self._machineContext.env.expanduser(self.path)
+        return self._copy(expanded_path)
 
     # Returns True if the path points to a remote machine.
-    def is_remote_path (self):
+    def is_remote_path(self):
         return True if self._hostname else False
 
     # Returns True if the given path represents the root of the file system.
-    def is_root (self):
+    def is_root(self):
         return self.path == os.path.sep
 
     # Returns true if the object this path represents exist.
-    def exists (self):
+    def exists(self):
         return self._machinePath.exists()
 
     # Returns true if the path represents a directory
-    def is_dir (self):
+    def is_dir(self):
         return self._machinePath.is_dir()
 
     # Returns True if the path represents a file.
-    def is_file (self):
+    def is_file(self):
         return self._machinePath.is_file()
 
     # Returns the last part of this Path, which is either
     # the file name the path points to, or the folder name
     # if this path points to a directory. The returned part
     # is of type String.
-    def get_last_part (self):
-        return os.path.basename (os.path.normpath (self.path))
+    def get_last_part(self):
+        return os.path.basename(os.path.normpath(self.path))
 
     # Strips the base folders of this path and returns a string
     # which consists of everyting that was added to this path
@@ -242,24 +241,24 @@ class Path(object):
     # To make is more consistent with conventions about absolute
     # paths, the string returned will not start with a slash or
     # os-separator character.
-    def strip_base (self, path):
+    def strip_base(self, path):
         res = None
-        if (not isinstance (path, Path)):
+        if not isinstance (path, Path):
             raise EnvironmentError()
         p = path.path
-        if (self.path.startswith (p)):
+        if self.path.startswith (p):
             res = self.path[len (p):]
-            if (res.startswith (os.sep)):
+            if res.startswith (os.sep):
                 res = res[1:]
         return res
 
     # Joins multiple path fragments together to a single path.
-    def join (self, *args):
-        return self._copy (os.path.join (self.path, *args))
+    def join(self, *args):
+        return self._copy(os.path.join(self.path, *args))
 
     # Enumerates all files and folders containes in the directory
     # this path represents.
-    def glob (self, pattern = None):
+    def glob(self, pattern = None):
         # We need os.path.join to join the path and the pattern,
         # because the plumbum-lib has a prolem with patterns that
         # end with a os.path.sep character.
@@ -272,18 +271,18 @@ class Path(object):
         return [self._copy (g) for g in self._machineContext.cwd.glob(pattern)]
 
     # Changes the working directory to the path this instance represents.
-    def change_work_dir (self):
+    def change_work_dir(self):
         return self._machineContext.cwd(self._machinePath)
 
     # Returns the machine context this path is defined in.
-    def get_context (self):
+    def get_context(self):
         return self._machineContext
 
     # Returns the full path representation as a string.
-    def full_path (self):
-        return '{0}@{1}:{2}'.format(self._username, self._hostname, self.path) if self.is_remote_path() else self.path
+    def full_path(self):
+        return f'{self._username}@{self._hostname}:{self.path}' if self.is_remote_path() else self.path
 
-    def __str__ (self):
+    def __str__(self):
         # Returns the path description in full detail as a string.
         # If this is a remote path we add the username and hostname
         # to the path, otherwise the local part of the path is just
@@ -298,26 +297,29 @@ class Path(object):
 
 
 # Returns a machine represenation for the remote host
-def get_machine (username, hostname, *, port = None, password = None, hostkey = None):
-    return _select_machine_context (username, hostname, port = port, password = password, hostkey = hostkey)
+def get_machine(username, hostname, *, port = None, password = None, hostkey = None):
+    return _select_machine_context(username, hostname, port = port, password = password, hostkey = hostkey)
 
 
 
 # Creates a command wrapper which contains the command name and its arguments.
 # This wrapper can then be piped or directly executed by calling its run() method.
-def mk_cmd (args, *, machine = None, stdin = None):
-    write_log ('Building command \'{0}\''.format(' '.join ([a if isinstance (a, str) else str(a) for a in args])), level = LogLevel.DEBUG)
+def mk_cmd (args, *, machine = None, stdin = None, stdout = None):
+    write_log('Building command \'{0}\''.format(' '.join ([a if isinstance (a, str) else str(a) for a in args])), level = LogLevel.DEBUG)
 
     # Figure out on which machine we will execute the command.
     # If no machine is given, then we will run the command on the 
     # local machine.
-    if (machine == None):
+    if machine is None:
         machine = pb.local
 
     cmd = machine[args[0]][args[1:]]
-    if (stdin):
+    if stdin:
         cmd = cmd << stdin
-
+    if stdout:
+        print('adding stdout to command')
+        cmd = cmd >> stdout
+    
     # Return a command wrapper that can be executed later or piped
     # together with other commands.
     return cmd
@@ -326,7 +328,7 @@ def mk_cmd (args, *, machine = None, stdin = None):
 def exec_cmd (cmd):
     global _env
 
-    write_log('Executing command \'{0}\''. format(str(cmd)), level = LogLevel.DEBUG)
+    write_log(f"Executing command '{str(cmd)}'", level = LogLevel.DEBUG)
 
     res = cmd.run(retcode = None, env = _env)
 
@@ -351,21 +353,21 @@ def exec_cmd (cmd):
 # the stdin-pipe of the shell to the command. If 'dryRun' is set to True
 # the command is not executed, but instead an empty result with a return-code
 # of 0 and empty stdout and stderr results is returned.
-def run_cmd (args, *, machine = None, stdin = None):
+def run_cmd(args, *, machine = None, stdin = None, stdout = None):
     global _env
 
-    cmd = mk_cmd (args, machine = machine, stdin = stdin)
+    cmd = mk_cmd(args, machine = machine, stdin = stdin, stdout = stdout)
 
-    return exec_cmd (cmd)
+    return exec_cmd(cmd)
 
 
 
 # Copies via scp from src to dst.
 # NOTE that both parameters must be instances of plumbum.Path
-def scp (src, dst):
-    if (not isinstance (src, Path) or not isinstance (dst, Path)):
+def scp(src, dst):
+    if not isinstance (src, Path) or not isinstance (dst, Path):
         return None
-    return pb.path.utils.copy (src.pbPath(), dst.pbPath())
+    return pb.path.utils.copy(src.pbPath(), dst.pbPath())
 
 
 
@@ -384,8 +386,8 @@ def add_to_env_path (path):
     currentPathElements = _env['PATH'].split(':')
     addPathElements = []
     for p in path.split(':'):
-        if (not p in currentPathElements):
-            addPathElements.append (p)
+        if not p in currentPathElements:
+            addPathElements.append(p)
     newPath = ':'.join (addPathElements + currentPathElements)
     _env['PATH'] = newPath
 
@@ -399,9 +401,6 @@ def init_module():
     _env = os.environ.copy()
 
 
-
-#def __init__():
-#    init_logger()
 
 init_module()
 

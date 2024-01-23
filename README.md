@@ -134,7 +134,13 @@ $> btrcp.py \
 
 `--log-file FILENAME`: Sets the log file name. With this option, output will be written to the log file instead of std-out.
 
+`--log-level`: Specifies the level for log messages. Possible values are DEBUG, INFO, WARNING, and ERROR. The default is INFO.
+
+`--show-progress`: Shows the progress of the actual copy-process. We assume that this will take some time, so this options gives a bit feedback that there is somethign actually happening.
+
 `--quiet`: No messages are written neither to std-out nor to a log-file.
+
+`--show-host-info`: Gathers information about the destination host system. This option is useful when encountering problems with the destination host which are connected to the available software and environment found on that machine. Information includes the user-name used to perform the actions on the destination host, the file system the destination path, and if rsync is available and ready to use.
 
 `--dry-run`: Performs a trial run, which causes no changes.
 
